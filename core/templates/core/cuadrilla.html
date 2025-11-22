@@ -1,0 +1,287 @@
+{% extends "core/base.html" %}
+
+{% block title %}Gestión de Cuadrillas{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">Gestión de Cuadrillas</h2>
+
+<!-- Mensajes de éxito o error -->
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<!-- Tabla de cuadrillas registradas - MOSTRADA PRIMERO -->
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-header bg-white d-flex justify-content-between align-items-center">
+    <h3 class="h5 mb-0">Cuadrillas registradas</h3>
+    <span class="badge bg-primary text-white">{{ cuadrillas|length }} en total</span>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-bordered table-striped align-middle mb-0">
+      <thead class="table-dark">
+        <tr>
+          <th>Nombre</th>
+          <th>Proyecto</th>
+          <th>Estado</th>
+          <th>Integrantes</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in cuadrillas %}
+        <tr>
+          <td>{{ c.nombre }}</td>
+          <td>{{ c.proyecto.nombre }}</td>
+          <td class="text-center">
+            <span class="px-2 py-1 rounded {% if c.estado == 'activa' %}bg-success text-white{% else %}bg-danger text-white{% endif %}">
+              {{ c.get_estado_display }}
+            </span>
+          </td>
+          <td>
+            <ul class="mb-0">
+              {% for i in c.integrantes.all %}
+                <li>
+                  <strong>{{ i.nombre }}</strong> — {{ i.get_cargo_display }}
+                  <span class="badge {% if i.estado == 'asignado' %}bg-success{% elif i.estado == 'licencia' %}bg-warning text-dark{% elif i.estado == 'suspendido' %}bg-danger{% else %}bg-secondary{% endif %} ms-1">
+                    {{ i.get_estado_display }}
+                  </span>
+                </li>
+              {% empty %}
+                <li><em>Sin integrantes</em></li>
+              {% endfor %}
+            </ul>
+          </td>
+          <td>
+            <!-- Formulario individual para editar cuadrilla -->
+            <form method="post" class="d-inline">
+              {% csrf_token %}
+              <button type="submit" name="editar_cuadrilla" value="{{ c.id }}" class="btn btn-sm btn-warning mb-1">Editar</button>
+            </form>
+            <form method="post" action="{% url 'eliminar_cuadrilla' c.id %}" class="d-inline">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm btn-danger mb-1">Eliminar</button>
+            </form>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="5" class="text-center text-muted py-4">No hay cuadrillas registradas.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Formulario para crear/editar cuadrilla -->
+<form method="post" class="mb-4">
+  {% csrf_token %}
+  <input type="hidden" name="accion" value="guardar">
+  <input type="hidden" name="cuadrilla_id" value="{{ cuadrilla.id|default:'' }}">
+  <div class="row g-3">
+    <div class="col-md-6">
+      <label class="form-label">Nombre de la cuadrilla</label>
+      <input type="text" name="nombre" placeholder="Nombre de la cuadrilla" class="form-control" value="{{ cuadrilla.nombre|default_if_none:'' }}" required>
+    </div>
+
+    <div class="col-md-6">
+      <label class="form-label">Proyecto asignado</label>
+      <select name="proyecto" class="form-select" required>
+        <option value="" disabled {% if not cuadrilla %}selected{% endif %}>— Seleccione un proyecto —</option>
+        {% for p in proyectos %}
+          <option value="{{ p.codigo }}" {% if cuadrilla and cuadrilla.proyecto.codigo == p.codigo %}selected{% endif %}>{{ p.nombre }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="col-md-4">
+  <label class="form-label">Estado</label>
+  <div class="d-flex align-items-center">
+      <select name="estado" class="form-select" required>
+          <option value="activa" {% if cuadrilla and cuadrilla.estado == 'activa' %}selected{% endif %}>Activa</option>
+          <option value="inactiva" {% if cuadrilla and cuadrilla.estado == 'inactiva' %}selected{% endif %}>Inactiva</option>
+      </select>
+      {% if cuadrilla %}
+      <span class="ms-2 px-2 py-1 rounded {% if cuadrilla.estado == 'activa' %}bg-success text-white{% else %}bg-danger text-white{% endif %}">
+          {{ cuadrilla.get_estado_display }}
+      </span>
+      {% endif %}
+  </div>
+</div>
+
+    <div class="col-12 mt-3">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
+          <div>
+            <h5 class="mb-0">Seleccionar y definir roles del equipo</h5>
+            <small class="text-muted">Seleccione los trabajadores y defina su rol y estado dentro de la cuadrilla.</small>
+          </div>
+          <div class="w-100 w-md-50">
+            <input type="search" id="filtro-integrantes" class="form-control form-control-sm" placeholder="Buscar trabajador por nombre">
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0" id="tabla-integrantes">
+            <thead class="table-light">
+              <tr>
+                <th scope="col">Seleccionar</th>
+                <th scope="col">Trabajador</th>
+                <th scope="col">Rol dentro de la cuadrilla</th>
+                <th scope="col">Estado operativo</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for i in integrantes_form %}
+              <tr data-nombre="{{ i.nombre|lower }}">
+                <td style="width: 90px;">
+                  <div class="form-check">
+                    <input class="form-check-input integrante-check" type="checkbox" name="integrantes" value="{{ i.id }}" id="integrante-{{ i.id }}" {% if cuadrilla and i.cuadrilla and i.cuadrilla.id == cuadrilla.id %}checked{% endif %}>
+                  </div>
+                </td>
+                <td>
+                  <label class="fw-semibold mb-0" for="integrante-{{ i.id }}">{{ i.nombre }}</label>
+                  <div class="small text-muted">
+                    Cargo base: {{ i.get_cargo_display }} ·
+                    {% if i.cuadrilla %}
+                      {% if cuadrilla and i.cuadrilla.id == cuadrilla.id %}
+                        Asignado a esta cuadrilla
+                      {% else %}
+                        Actualmente en <span class="badge bg-light text-dark">{{ i.cuadrilla.nombre }}</span>
+                      {% endif %}
+                    {% else %}
+                      Disponible
+                    {% endif %}
+                  </div>
+                </td>
+                <td style="width: 240px;">
+                  <select name="rol_{{ i.id }}" class="form-select form-select-sm control-integrante" data-checkbox="integrante-{{ i.id }}" {% if not cuadrilla or not i.cuadrilla or i.cuadrilla.id != cuadrilla.id %}disabled{% endif %}>
+                    {% for clave, texto in cargo_choices %}
+                      <option value="{{ clave }}" {% if i.cargo == clave %}selected{% endif %}>{{ texto }}</option>
+                    {% endfor %}
+                  </select>
+                </td>
+                <td style="width: 220px;">
+                  <select name="estado_{{ i.id }}" class="form-select form-select-sm control-integrante" data-checkbox="integrante-{{ i.id }}" {% if not cuadrilla or not i.cuadrilla or i.cuadrilla.id != cuadrilla.id %}disabled{% endif %}>
+                    {% for clave, texto in estado_choices %}
+                      {% if clave != 'disponible' or not cuadrilla or not i.cuadrilla or i.cuadrilla.id != cuadrilla.id %}
+                        <option value="{{ clave }}" {% if i.estado == clave %}selected{% elif not i.estado and clave == 'asignado' %}selected{% endif %}>{{ texto }}</option>
+                      {% endif %}
+                    {% endfor %}
+                  </select>
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="4" class="text-center text-muted py-4">No hay trabajadores disponibles para asignar.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="d-flex justify-content-end mt-3">
+    <button class="btn btn-primary">
+      {% if cuadrilla %}💾 Guardar Cambios{% else %}💾 Guardar Cuadrilla{% endif %}
+    </button>
+  </div>
+</form>
+
+<!-- Formulario rápido para mover trabajadores entre cuadrillas -->
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-header bg-white">
+    <h5 class="mb-0">Reubicar trabajadores</h5>
+    <small class="text-muted">Mueva un trabajador a otra cuadrilla sin editar manualmente ambas.</small>
+  </div>
+  <div class="card-body">
+    <form method="post" class="row g-3 align-items-end">
+      {% csrf_token %}
+      <input type="hidden" name="accion" value="reubicar">
+      <div class="col-md-5">
+        <label class="form-label">Trabajador</label>
+        <select name="integrante_id" class="form-select" {% if not integrantes_reubicables %}disabled{% endif %}>
+          <option value="" selected disabled>— Seleccione un trabajador —</option>
+          {% for integrante in integrantes_reubicables %}
+            <option value="{{ integrante.id }}">{{ integrante.nombre }} · {{ integrante.cuadrilla.nombre }}</option>
+          {% empty %}
+            <option disabled>No hay trabajadores asignados</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-5">
+        <label class="form-label">Cuadrilla destino</label>
+        <select name="cuadrilla_destino" class="form-select" {% if not integrantes_reubicables %}disabled{% endif %}>
+          <option value="" selected disabled>— Seleccione cuadrilla —</option>
+          {% for c in cuadrillas %}
+            <option value="{{ c.id }}">{{ c.nombre }} · {{ c.proyecto.nombre }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2 d-grid">
+        <button class="btn btn-outline-primary" {% if not integrantes_reubicables %}disabled{% endif %}>➡️ Reubicar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Historial de cambios -->
+<div class="card border-0 shadow-sm mt-5">
+  <div class="card-header bg-white d-flex justify-content-between align-items-center">
+    <h5 class="mb-0">Historial de cambios recientes</h5>
+    <small class="text-muted">Visibles para todos los interesados.</small>
+  </div>
+  <ul class="list-group list-group-flush">
+    {% for item in historial %}
+      <li class="list-group-item">
+        <div class="d-flex justify-content-between">
+          <div>
+            <strong>{{ item.cuadrilla.nombre }}</strong>
+            <span class="badge bg-light text-dark ms-2">{{ item.get_accion_display }}</span>
+          </div>
+          <span class="text-muted small">{{ item.fecha|date:"d/m/Y H:i" }}</span>
+        </div>
+        <p class="mb-0 text-muted small mt-1">{{ item.descripcion }}</p>
+      </li>
+    {% empty %}
+      <li class="list-group-item text-center text-muted">Aún no hay registros.</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  document.querySelectorAll(".integrante-check").forEach(function (checkbox) {
+    const row = checkbox.closest("tr");
+    const controls = row.querySelectorAll(".control-integrante");
+    const syncState = function () {
+      controls.forEach(function (control) {
+        control.disabled = !checkbox.checked;
+      });
+    };
+    checkbox.addEventListener("change", syncState);
+    syncState();
+  });
+
+  const filtro = document.getElementById("filtro-integrantes");
+  const filas = document.querySelectorAll("#tabla-integrantes tbody tr");
+  if (filtro) {
+    filtro.addEventListener("input", function () {
+      const termino = filtro.value.trim().toLowerCase();
+      filas.forEach(function (fila) {
+        const nombre = fila.dataset.nombre || "";
+        fila.style.display = nombre.includes(termino) ? "" : "none";
+      });
+    });
+  }
+});
+</script>
+{% endblock scripts %}

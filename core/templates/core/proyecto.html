@@ -1,0 +1,143 @@
+{% extends "core/base.html" %}
+{% load static %}
+
+{% block title %}Gestión de Proyectos{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
+    <div>
+        <h2 class="mb-1">Gestión de Proyectos</h2>
+        <p class="text-muted mb-0">Administra y monitorea los proyectos activos y exporta tus registros cuando lo necesites.</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <a href="{% url 'exportar_excel' %}" class="btn btn-success d-flex align-items-center gap-1">
+            <i class="bi bi-file-earmark-spreadsheet-fill"></i>
+            Exportar a Excel
+        </a>
+    </div>
+</div>
+
+<!-- Mensajes de éxito o error -->
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<!-- Formulario para agregar/editar proyecto -->
+<form method="post" class="mb-4">
+    {% csrf_token %}
+    <div class="row g-3">
+        <div class="col-md-6">
+            <label class="form-label">Nombre del Proyecto</label>
+            <input type="text" name="nombre" placeholder="Nombre del Proyecto" class="form-control" value="{{ proyecto.nombre|default_if_none:'' }}" required>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Cliente</label>
+            <input type="text" name="cliente" placeholder="Nombre del Cliente" class="form-control" value="{{ proyecto.cliente|default_if_none:'' }}" required>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Estado</label>
+            <select name="estado" class="form-select" required>
+                <option value="planificado" {% if proyecto and proyecto.estado == 'planificado' %}selected{% endif %}>Planificado</option>
+                <option value="en_progreso" {% if proyecto and proyecto.estado == 'en_progreso' %}selected{% endif %}>En Progreso</option>
+                <option value="completado" {% if proyecto and proyecto.estado == 'completado' %}selected{% endif %}>Completado</option>
+                <option value="cancelado" {% if proyecto and proyecto.estado == 'cancelado' %}selected{% endif %}>Cancelado</option>
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Fecha de Inicio</label>
+            <input type="date" name="fecha_inicio" placeholder="YYYY-MM-DD" class="form-control" value="{{ proyecto.fecha_inicio|date:'Y-m-d' }}" required>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Fecha de Término</label>
+            <input type="date" name="fecha_termino" class="form-control" value="{{ proyecto.fecha_termino|date:'Y-m-d' }}">
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Presupuesto</label>
+            <input type="number" name="presupuesto" class="form-control" placeholder="0" value="{{ proyecto.presupuesto|default_if_none:0 }}">
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Dirección</label>
+            <input type="text" name="direccion" placeholder="Dirección" class="form-control" value="{{ proyecto.direccion|default_if_none:'' }}" required>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Ciudad</label>
+            <input type="text" name="ciudad" placeholder="Ciudad" class="form-control" value="{{ proyecto.ciudad|default_if_none:'' }}" required>
+        </div>
+        <div class="col-12">
+            <label class="form-label">Descripción</label>
+            <textarea name="descripcion" class="form-control" rows="2">{{ proyecto.descripcion|default_if_none:'' }}</textarea>
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-end mt-3">
+        <button type="submit" class="btn btn-primary"> Guardar Proyecto</button>
+    </div>
+</form>
+
+<!-- Tabla de proyectos -->
+<h3 class="mt-5">Proyectos registrados</h3>
+<table class="table table-bordered table-striped align-middle">
+    <thead class="table-dark">
+        <tr>
+            <th>Código</th>
+            <th>Nombre</th>
+            <th>Cliente</th>
+            <th>Estado</th>
+            <th>Inicio</th>
+            <th>Término</th>
+            <th>Presupuesto</th>
+            <th>Dirección</th>
+            <th>Ciudad</th>
+            <th>Descripción</th>
+            <th>Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for p in proyectos %}
+        <tr>
+            <td>{{ p.codigo }}</td>
+            <td>{{ p.nombre }}</td>
+            <td>{{ p.cliente }}</td>
+            <td>
+                {% if p.estado == "planificado" %}
+                    <span class="badge bg-info">Planificado</span>
+                {% elif p.estado == "en_progreso" %}
+                    <span class="badge bg-warning text-dark">En progreso</span>
+                {% elif p.estado == "completado" %}
+                    <span class="badge bg-success">Completado</span>
+                {% elif p.estado == "cancelado" %}
+                    <span class="badge bg-danger">Cancelado</span>
+                {% endif %}
+            </td>
+            <td>{{ p.fecha_inicio|date:"d/m/Y" }}</td>
+            <td>
+                {% if p.fecha_termino %}
+                    {{ p.fecha_termino|date:"d/m/Y" }}
+                {% else %}
+                    <span class="text-muted">-</span>
+                {% endif %}
+            </td>
+            <td>${{ p.presupuesto|floatformat:2 }}</td>
+            <td>{{ p.direccion }}</td>
+            <td>{{ p.ciudad }}</td>
+            <td>{{ p.descripcion|default:"(Sin descripción)" }}</td>
+            <td>
+                <form method="post" action="{% url 'eliminar_proyecto' p.codigo %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-danger mb-1">Eliminar</button>
+                </form>
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="11" class="text-center text-muted">No hay proyectos registrados.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
