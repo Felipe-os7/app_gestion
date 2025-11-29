@@ -23,6 +23,9 @@ urlpatterns = [
     path('cuadrilla/editar/<int:cuadrilla_id>/', views.editar_cuadrilla, name='editar_cuadrilla'),
     path('cuadrilla/eliminar/<int:cuadrilla_id>/', views.eliminar_cuadrilla, name='eliminar_cuadrilla'),
 
+    # Reasignación
+    path('reasignacion/', views.reasignacion_view, name='reasignacion'),
+
     # Exportar Excel
     path('exportar_excel/', views.exportar_excel, name='exportar_excel'),
 ]

@@ -115,11 +115,44 @@
 </div>
 
     <div class="col-12 mt-3">
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header bg-white">
+          <h5 class="mb-0">Agregar Trabajadores Nuevos (Sin Usuario)</h5>
+          <small class="text-muted">Puede agregar operarios, supervisores y ayudantes sin necesidad de que estén registrados en el sistema.</small>
+        </div>
+        <div class="card-body">
+          <div id="trabajadores-nuevos-container">
+            <div class="row g-3 trabajador-nuevo-item">
+              <div class="col-md-4">
+                <label class="form-label">Nombre</label>
+                <input type="text" name="nombre_trabajador_nuevo" class="form-control form-control-sm" placeholder="Nombre">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Apellido</label>
+                <input type="text" name="apellido_trabajador_nuevo" class="form-control form-control-sm" placeholder="Apellido">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Cargo</label>
+                <select name="cargo_trabajador_nuevo" class="form-select form-select-sm">
+                  <option value="operario">Operario</option>
+                  <option value="ayudante">Ayudante</option>
+                  <option value="supervisor">Supervisor</option>
+                </select>
+              </div>
+              <div class="col-md-1 d-flex align-items-end">
+                <button type="button" class="btn btn-sm btn-danger remove-trabajador-nuevo" style="display: none;">✗</button>
+              </div>
+            </div>
+          </div>
+          <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="agregar-trabajador-nuevo">+ Agregar Otro Trabajador</button>
+        </div>
+      </div>
+      
       <div class="card border-0 shadow-sm">
         <div class="card-header bg-white d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
           <div>
             <h5 class="mb-0">Seleccionar y definir roles del equipo</h5>
-            <small class="text-muted">Seleccione los trabajadores y defina su rol y estado dentro de la cuadrilla.</small>
+            <small class="text-muted">Seleccione los trabajadores registrados y defina su rol y estado dentro de la cuadrilla.</small>
           </div>
           <div class="w-100 w-md-50">
             <input type="search" id="filtro-integrantes" class="form-control form-control-sm" placeholder="Buscar trabajador por nombre">
@@ -282,6 +315,45 @@ document.addEventListener("DOMContentLoaded", function () {
       });
     });
   }
+
+  // Manejo de trabajadores nuevos
+  const container = document.getElementById("trabajadores-nuevos-container");
+  const agregarBtn = document.getElementById("agregar-trabajador-nuevo");
+  
+  function actualizarBotonesEliminar() {
+    const items = container.querySelectorAll(".trabajador-nuevo-item");
+    items.forEach(function(item, index) {
+      const btnEliminar = item.querySelector(".remove-trabajador-nuevo");
+      if (items.length > 1) {
+        btnEliminar.style.display = "block";
+      } else {
+        btnEliminar.style.display = "none";
+      }
+    });
+  }
+
+  if (agregarBtn) {
+    agregarBtn.addEventListener("click", function() {
+      const nuevoItem = container.querySelector(".trabajador-nuevo-item").cloneNode(true);
+      nuevoItem.querySelectorAll("input, select").forEach(function(input) {
+        input.value = "";
+      });
+      container.appendChild(nuevoItem);
+      actualizarBotonesEliminar();
+    });
+  }
+
+  container.addEventListener("click", function(e) {
+    if (e.target.classList.contains("remove-trabajador-nuevo")) {
+      const item = e.target.closest(".trabajador-nuevo-item");
+      if (container.querySelectorAll(".trabajador-nuevo-item").length > 1) {
+        item.remove();
+        actualizarBotonesEliminar();
+      }
+    }
+  });
+
+  actualizarBotonesEliminar();
 });
 </script>
 {% endblock scripts %}

@@ -36,27 +36,25 @@ class RegistroUsuarioForm(UserCreationForm):
         label="Apellido"
     )
     rol = forms.ChoiceField(
-        choices=PerfilUsuario.ROL_CHOICES,
+        choices=[('lider_cuadrilla', 'Líder de Cuadrilla')],
         required=True,
         widget=forms.Select(attrs={
             'class': 'form-select'
         }),
         label="Rol en el sistema",
-        help_text="Selecciona tu rol: Líder de Cuadrilla o Supervisor"
+        help_text="Solo se permite registro como Líder de Cuadrilla",
+        initial='lider_cuadrilla'
     )
     cargo = forms.ChoiceField(
-        choices=Integrante.CARGO_CHOICES,
-        required=True,
-        widget=forms.Select(attrs={
-            'class': 'form-select'
-        }),
-        label="Cargo",
-        help_text="Selecciona tu cargo en la organización"
+        choices=[('lider', 'Líder de cuadrilla')],
+        required=False,
+        widget=forms.HiddenInput(),
+        initial='lider'
     )
 
     class Meta:
         model = User
-        fields = ('username', 'first_name', 'last_name', 'email', 'password1', 'password2', 'rol', 'cargo')
+        fields = ('username', 'first_name', 'last_name', 'email', 'password1', 'password2', 'rol')
 
     def clean_username(self):
         username = self.cleaned_data['username']
@@ -116,16 +114,16 @@ class RegistroUsuarioForm(UserCreationForm):
         
         if commit:
             user.save()
-            # Crear o actualizar el perfil con el rol seleccionado
+            # Crear o actualizar el perfil con el rol seleccionado (solo lider_cuadrilla)
             perfil, created = PerfilUsuario.objects.get_or_create(usuario=user)
-            perfil.rol = self.cleaned_data['rol']
+            perfil.rol = 'lider_cuadrilla'  # Forzar a lider_cuadrilla
             perfil.save()
             
-            # Crear el Integrante asociado
+            # Crear el Integrante asociado (solo líder de cuadrilla)
             Integrante.objects.get_or_create(
                 usuario=user,
                 defaults={
-                    'cargo': self.cleaned_data['cargo'],
+                    'cargo': 'lider',  # Solo líder de cuadrilla
                     'estado': 'disponible'
                 }
             )

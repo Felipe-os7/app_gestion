@@ -8,7 +8,7 @@ from django.db.models import Q
 from decimal import Decimal, InvalidOperation
 import pandas as pd
 
-from .models import Proyecto, Cuadrilla, Integrante, CambioCuadrilla
+from .models import Proyecto, Cuadrilla, Integrante, CambioCuadrilla, SolicitudReasignacion
 from .services import DashboardStatsService
 
 # ======================
@@ -41,8 +41,16 @@ def proyecto_view(request):
         try:
             if fecha_inicio_raw:
                 fecha_inicio = timezone.datetime.strptime(fecha_inicio_raw, "%Y-%m-%d").date()
+                # Validar que la fecha de inicio no sea anterior a la fecha actual
+                if fecha_inicio < timezone.now().date():
+                    messages.error(request, "La fecha de inicio no puede ser anterior a la fecha actual.")
+                    return redirect("proyecto")
             if fecha_termino_raw:
                 fecha_termino = timezone.datetime.strptime(fecha_termino_raw, "%Y-%m-%d").date()
+                # Validar que la fecha de término no sea anterior a la fecha de inicio
+                if fecha_termino < fecha_inicio:
+                    messages.error(request, "La fecha de término no puede ser anterior a la fecha de inicio.")
+                    return redirect("proyecto")
         except ValueError:
             messages.error(request, "Formato de fecha inválido. Use AAAA-MM-DD.")
             return redirect("proyecto")
@@ -91,13 +99,14 @@ def registrar_cambio(cuadrilla, accion, descripcion):
 # CUADRILLA
 # ======================
 
+@login_required
 def cuadrilla_view(request):
     proyectos = Proyecto.objects.all()
-    cuadrillas = Cuadrilla.objects.select_related("proyecto").prefetch_related("integrantes").all()
+    cuadrillas = Cuadrilla.objects.select_related("proyecto", "trabajador").prefetch_related("integrantes").all()
     historial = CambioCuadrilla.objects.select_related("cuadrilla").order_by("-fecha")[:10]
 
     cuadrilla = None  # Para edición en el mismo form
-    integrantes_qs = Integrante.objects.select_related("cuadrilla", "usuario").order_by("usuario__first_name", "usuario__last_name")
+    integrantes_qs = Integrante.objects.select_related("cuadrilla", "usuario").order_by("nombre_trabajador", "apellido_trabajador", "usuario__first_name", "usuario__last_name")
     integrantes_form = integrantes_qs.filter(cuadrilla__isnull=True)
     integrantes_cuadrilla_ids = set()
     integrantes_reubicables = integrantes_qs.filter(cuadrilla__isnull=False)
@@ -146,8 +155,22 @@ def cuadrilla_view(request):
             if not proyecto_id:
                 messages.error(request, "Debe seleccionar un proyecto.")
                 return redirect("cuadrilla")
-            if not integrantes_ids:
-                messages.error(request, "Debe seleccionar al menos un integrante.")
+            # Verificar si se están creando trabajadores nuevos sin usuario
+            trabajadores_nuevos = []
+            nombres_nuevos = request.POST.getlist("nombre_trabajador_nuevo")
+            apellidos_nuevos = request.POST.getlist("apellido_trabajador_nuevo")
+            cargos_nuevos = request.POST.getlist("cargo_trabajador_nuevo")
+            
+            for i in range(len(nombres_nuevos)):
+                if nombres_nuevos[i].strip() and apellidos_nuevos[i].strip() and cargos_nuevos[i]:
+                    trabajadores_nuevos.append({
+                        'nombre': nombres_nuevos[i].strip(),
+                        'apellido': apellidos_nuevos[i].strip(),
+                        'cargo': cargos_nuevos[i]
+                    })
+            
+            if not integrantes_ids and not trabajadores_nuevos:
+                messages.error(request, "Debe seleccionar al menos un integrante o crear un trabajador nuevo.")
                 return redirect("cuadrilla")
 
             cargo_validos = dict(Integrante.CARGO_CHOICES).keys()
@@ -189,6 +212,28 @@ def cuadrilla_view(request):
                         integrante.save()
 
                 integrantes_resumen = []
+                lider_asignado = None
+                lideres_count = 0
+                
+                # Crear trabajadores nuevos sin usuario
+                for trabajador_nuevo in trabajadores_nuevos:
+                    cargo_trab = trabajador_nuevo['cargo']
+                    if cargo_trab == 'lider':
+                        lideres_count += 1
+                    nuevo_integrante = Integrante.objects.create(
+                        nombre_trabajador=trabajador_nuevo['nombre'],
+                        apellido_trabajador=trabajador_nuevo['apellido'],
+                        cargo=cargo_trab,
+                        cuadrilla=cuadrilla,
+                        estado='asignado'
+                    )
+                    integrantes_resumen.append(
+                        f"{nuevo_integrante.get_nombre_completo()} ({nuevo_integrante.get_cargo_display()} · {nuevo_integrante.get_estado_display()})"
+                    )
+                    if cargo_trab == 'lider':
+                        lider_asignado = nuevo_integrante
+                
+                # Procesar integrantes existentes
                 for integrante, rol, estado_trabajador in integrantes_payload:
                     estado_final = estado_trabajador if estado_trabajador != 'disponible' else 'asignado'
                     integrante.cargo = rol
@@ -198,6 +243,22 @@ def cuadrilla_view(request):
                     integrantes_resumen.append(
                         f"{integrante.nombre} ({integrante.get_cargo_display()} · {integrante.get_estado_display()})"
                     )
+                    if rol == 'lider':
+                        lideres_count += 1
+                        lider_asignado = integrante
+                
+                # Validar que solo haya un líder por cuadrilla
+                if lideres_count > 1:
+                    messages.error(request, "Solo se permite un líder de cuadrilla por cuadrilla.")
+                    return redirect("cuadrilla")
+                if lideres_count == 0:
+                    messages.error(request, "Debe asignar un líder de cuadrilla.")
+                    return redirect("cuadrilla")
+                
+                # Asignar el líder a la cuadrilla
+                if lider_asignado:
+                    cuadrilla.trabajador = lider_asignado
+                    cuadrilla.save()
 
                 accion_log = "creacion" if crear else "actualizacion"
                 descripcion = f"Cuadrilla {'creada' if crear else 'actualizada'}: {nombre}. "
@@ -290,6 +351,123 @@ def eliminar_cuadrilla(request, cuadrilla_id):
 # ======================
 # EXPORTAR PROYECTOS A EXCEL
 # ======================
+@login_required
+def reasignacion_view(request):
+    """
+    Vista para gestionar reasignaciones de trabajadores con sistema de solicitudes.
+    """
+    trabajadores = Integrante.objects.select_related("cuadrilla", "usuario").filter(cuadrilla__isnull=False)
+    cuadrillas = Cuadrilla.objects.select_related("proyecto").all()
+    solicitudes = SolicitudReasignacion.objects.select_related(
+        "trabajador", "cuadrilla_origen", "cuadrilla_destino", "respondido_por"
+    ).order_by("-fecha_solicitud")
+    
+    # Filtrar solicitudes según el rol del usuario
+    if hasattr(request.user, 'perfil') and request.user.perfil.rol == 'lider_cuadrilla':
+        # Los líderes solo ven solicitudes de sus cuadrillas
+        cuadrillas_lider = Cuadrilla.objects.filter(trabajador__usuario=request.user)
+        solicitudes = solicitudes.filter(cuadrilla_destino__in=cuadrillas_lider)
+    
+    if request.method == "POST":
+        accion = request.POST.get("accion")
+        
+        if accion == "crear_solicitud":
+            trabajador_id = request.POST.get("trabajador_id")
+            cuadrilla_destino_id = request.POST.get("cuadrilla_destino")
+            motivo = request.POST.get("motivo", "").strip()
+            
+            if not trabajador_id or not cuadrilla_destino_id:
+                messages.error(request, "Debe seleccionar el trabajador y la cuadrilla destino.")
+                return redirect("reasignacion")
+            
+            trabajador = get_object_or_404(Integrante, id=trabajador_id)
+            cuadrilla_destino = get_object_or_404(Cuadrilla, id=cuadrilla_destino_id)
+            cuadrilla_origen = trabajador.cuadrilla
+            
+            if not cuadrilla_origen:
+                messages.error(request, "El trabajador no está asignado a ninguna cuadrilla.")
+                return redirect("reasignacion")
+            
+            if cuadrilla_origen == cuadrilla_destino:
+                messages.info(request, "El trabajador ya pertenece a la cuadrilla seleccionada.")
+                return redirect("reasignacion")
+            
+            # Verificar si ya existe una solicitud pendiente
+            solicitud_existente = SolicitudReasignacion.objects.filter(
+                trabajador=trabajador,
+                cuadrilla_destino=cuadrilla_destino,
+                estado='pendiente'
+            ).first()
+            
+            if solicitud_existente:
+                messages.info(request, "Ya existe una solicitud pendiente para este trabajador y cuadrilla.")
+                return redirect("reasignacion")
+            
+            SolicitudReasignacion.objects.create(
+                trabajador=trabajador,
+                cuadrilla_origen=cuadrilla_origen,
+                cuadrilla_destino=cuadrilla_destino,
+                motivo=motivo
+            )
+            messages.success(request, "✅ Solicitud de reasignación enviada correctamente.")
+            return redirect("reasignacion")
+        
+        elif accion == "responder_solicitud":
+            solicitud_id = request.POST.get("solicitud_id")
+            respuesta = request.POST.get("respuesta")  # 'aceptar' o 'rechazar'
+            
+            if not solicitud_id or not respuesta:
+                messages.error(request, "Datos inválidos.")
+                return redirect("reasignacion")
+            
+            solicitud = get_object_or_404(SolicitudReasignacion, id=solicitud_id)
+            
+            # Verificar que el usuario sea el líder de la cuadrilla destino
+            if not hasattr(request.user, 'perfil') or request.user.perfil.rol != 'lider_cuadrilla':
+                messages.error(request, "Solo los líderes de cuadrilla pueden responder solicitudes.")
+                return redirect("reasignacion")
+            
+            cuadrilla_destino = solicitud.cuadrilla_destino
+            if cuadrilla_destino.trabajador and cuadrilla_destino.trabajador.usuario != request.user:
+                messages.error(request, "Solo el líder de la cuadrilla destino puede responder esta solicitud.")
+                return redirect("reasignacion")
+            
+            if solicitud.estado != 'pendiente':
+                messages.info(request, "Esta solicitud ya fue respondida.")
+                return redirect("reasignacion")
+            
+            if respuesta == 'aceptar':
+                solicitud.estado = 'aceptada'
+                solicitud.respondido_por = request.user
+                solicitud.fecha_respuesta = timezone.now()
+                solicitud.save()
+                
+                # Realizar la reasignación
+                trabajador = solicitud.trabajador
+                trabajador.cuadrilla = cuadrilla_destino
+                trabajador.estado = 'asignado'
+                trabajador.save()
+                
+                descripcion = f"{trabajador.get_nombre_completo()} fue reasignado desde {solicitud.cuadrilla_origen.nombre} a {cuadrilla_destino.nombre} (solicitud aceptada)."
+                registrar_cambio(cuadrilla_destino, "reasignacion", descripcion)
+                
+                messages.success(request, "✅ Solicitud aceptada y trabajador reasignado correctamente.")
+            else:
+                solicitud.estado = 'rechazada'
+                solicitud.respondido_por = request.user
+                solicitud.fecha_respuesta = timezone.now()
+                solicitud.save()
+                messages.info(request, "Solicitud rechazada.")
+            
+            return redirect("reasignacion")
+    
+    return render(request, "core/reasignacion.html", {
+        "trabajadores": trabajadores,
+        "cuadrillas": cuadrillas,
+        "solicitudes": solicitudes,
+    })
+
+
 @login_required
 def exportar_excel(request):
     proyectos = Proyecto.objects.all().values(

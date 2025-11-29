@@ -55,6 +55,19 @@ class SessionSecurityMiddleware:
         # ❗ IMPORTANTE: Ignorar /admin para que no redirija al login de la app
         if request.path.startswith('/admin'):
             return self.get_response(request)
+        
+        # Ignorar actualizaciones de cuadrilla para evitar redirección al login
+        if request.path.startswith('/cuadrilla') and request.method == 'POST':
+            # No verificar hash cuando se actualiza una cuadrilla
+            response = self.get_response(request)
+            # Actualizar el hash después de la respuesta para evitar problemas
+            if request.user.is_authenticated:
+                try:
+                    current_user = User.objects.get(pk=request.user.pk)
+                    request.session['user_security_hash'] = self._get_user_hash(current_user)
+                except:
+                    pass
+            return response
 
         # Solo verificar si el usuario está autenticado
         if request.user.is_authenticated:

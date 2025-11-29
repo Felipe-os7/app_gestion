@@ -44,6 +44,15 @@ class Cuadrilla(models.Model):
         verbose_name="Proyecto asignado"
     )
     estado = models.CharField("Estado", max_length=10, choices=ESTADO_CHOICES, default='activa')
+    trabajador = models.ForeignKey(
+        'Integrante',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="cuadrillas_lideradas",
+        verbose_name="Líder de cuadrilla",
+        limit_choices_to={'cargo': 'lider'}
+    )
 
     class Meta:
         verbose_name = "Cuadrilla"
@@ -71,11 +80,15 @@ class Integrante(models.Model):
         User,
         on_delete=models.CASCADE,
         related_name="integrante",
-        verbose_name="Usuario"
+        verbose_name="Usuario",
+        null=True,
+        blank=True
     )
+    nombre_trabajador = models.CharField("Nombre", max_length=100, blank=True)
+    apellido_trabajador = models.CharField("Apellido", max_length=100, blank=True)
     cargo = models.CharField("Cargo", max_length=20, choices=CARGO_CHOICES)
     cuadrilla = models.ForeignKey(
-        Cuadrilla,
+        'Cuadrilla',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -88,15 +101,22 @@ class Integrante(models.Model):
     class Meta:
         verbose_name = "Integrante"
         verbose_name_plural = "Integrantes"
-        ordering = ["usuario__first_name", "usuario__last_name"]
+        ordering = ["nombre_trabajador", "apellido_trabajador", "usuario__first_name", "usuario__last_name"]
+
+    def get_nombre_completo(self):
+        """Retorna el nombre completo del trabajador."""
+        if self.usuario:
+            return self.usuario.get_full_name() or self.usuario.username
+        else:
+            return f"{self.nombre_trabajador} {self.apellido_trabajador}".strip() or "Sin nombre"
 
     @property
     def nombre(self):
-        """Retorna el nombre completo del usuario asociado."""
-        return self.usuario.get_full_name() or self.usuario.username
+        """Retorna el nombre completo del trabajador (compatibilidad)."""
+        return self.get_nombre_completo()
 
     def __str__(self):
-        return f"{self.nombre} — {self.get_cargo_display()}"
+        return f"{self.get_nombre_completo()} — {self.get_cargo_display()}"
 
 
 class CambioCuadrilla(models.Model):
@@ -119,3 +139,50 @@ class CambioCuadrilla(models.Model):
 
     def __str__(self):
         return f"{self.get_accion_display()} · {self.cuadrilla.nombre} ({self.fecha:%d/%m %H:%M})"
+
+
+class SolicitudReasignacion(models.Model):
+    ESTADO_CHOICES = [
+        ('pendiente', 'Pendiente'),
+        ('aceptada', 'Aceptada'),
+        ('rechazada', 'Rechazada'),
+    ]
+
+    trabajador = models.ForeignKey(
+        Integrante,
+        on_delete=models.CASCADE,
+        related_name="solicitudes_reasignacion",
+        verbose_name="Trabajador"
+    )
+    cuadrilla_origen = models.ForeignKey(
+        Cuadrilla,
+        on_delete=models.CASCADE,
+        related_name="solicitudes_salida",
+        verbose_name="Cuadrilla origen"
+    )
+    cuadrilla_destino = models.ForeignKey(
+        Cuadrilla,
+        on_delete=models.CASCADE,
+        related_name="solicitudes_entrada",
+        verbose_name="Cuadrilla destino"
+    )
+    estado = models.CharField("Estado", max_length=20, choices=ESTADO_CHOICES, default='pendiente')
+    motivo = models.TextField("Motivo de la solicitud", blank=True)
+    fecha_solicitud = models.DateTimeField(auto_now_add=True)
+    fecha_respuesta = models.DateTimeField(null=True, blank=True)
+    respondido_por = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="solicitudes_respondidas",
+        verbose_name="Respondido por"
+    )
+
+    class Meta:
+        verbose_name = "Solicitud de Reasignación"
+        verbose_name_plural = "Solicitudes de Reasignación"
+        ordering = ["-fecha_solicitud"]
+
+    def __str__(self):
+        return f"Solicitud de {self.trabajador.get_nombre_completo()} - {self.get_estado_display()}"

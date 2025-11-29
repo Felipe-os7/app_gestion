@@ -257,19 +257,6 @@
                     </div>
 
                     <div class="mb-3">
-                        <label for="{{ form.cargo.id_for_label }}" class="form-label">{{ form.cargo.label }}</label>
-                        {{ form.cargo }}
-                        {% if form.cargo.errors %}
-                            <div class="invalid-feedback d-block">
-                                {{ form.cargo.errors.0 }}
-                            </div>
-                        {% endif %}
-                        {% if form.cargo.help_text %}
-                            <div class="form-text">{{ form.cargo.help_text }}</div>
-                        {% endif %}
-                    </div>
-
-                    <div class="mb-3">
                         <label for="{{ form.password1.id_for_label }}" class="form-label">Contraseña</label>
                         {{ form.password1 }}
                         {% if form.password1.errors %}

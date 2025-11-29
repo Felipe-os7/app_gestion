@@ -307,6 +307,12 @@
                                 <span>Cuadrillas</span>
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'reasignacion' %}active{% endif %}" href="{% url 'reasignacion' %}">
+                                <i class="bi bi-arrow-left-right"></i>
+                                <span>Reasignación</span>
+                            </a>
+                        </li>
                     </ul>
                 </div>
             </nav>
