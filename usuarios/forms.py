@@ -96,9 +96,9 @@ class RegistroUsuarioForm(UserCreationForm):
         super().__init__(*args, **kwargs)
         self.fields['username'].widget.attrs.update({
             'class': 'form-control',
-            'placeholder': 'Ingresa tu RUT chileno (ej: 12345678-9)'
+            'placeholder': 'Ingresa tu RUT(ej: 12345678-9)'
         })
-        self.fields['username'].help_text = 'El nombre de usuario debe ser un RUT chileno válido (ejemplo: 12345678-9) y se usará para iniciar sesión.'
+        self.fields['username'].help_text = 'El nombre de usuario debe ser un RUT válido (ejemplo: 12345678-9) y se usará para iniciar sesión.'
         self.fields['password1'].widget.attrs.update({
             'class': 'form-control',
             'placeholder': 'Ingresa tu contraseña'

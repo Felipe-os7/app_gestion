@@ -40,7 +40,7 @@ class Cuadrilla(models.Model):
     proyecto = models.ForeignKey(
         Proyecto,
         on_delete=models.CASCADE,
-        related_name="cuadrillas",  # <-- relacionado con proyecto
+        related_name="cuadrillas",  
         verbose_name="Proyecto asignado"
     )
     estado = models.CharField("Estado", max_length=10, choices=ESTADO_CHOICES, default='activa')
