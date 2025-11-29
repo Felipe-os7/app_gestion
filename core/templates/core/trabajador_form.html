@@ -1,0 +1,39 @@
+{% extends "core/base.html" %}
+
+{% block title %}Agregar Trabajador{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">Agregar Trabajador</h2>
+
+<form method="post" class="row g-3">
+  {% csrf_token %}
+  <div class="col-md-4">
+    <label class="form-label">Nombre</label>
+    <input type="text" name="nombre_trabajador" class="form-control" required>
+  </div>
+  <div class="col-md-4">
+    <label class="form-label">Apellido</label>
+    <input type="text" name="apellido_trabajador" class="form-control" required>
+  </div>
+  <div class="col-md-4">
+    <label class="form-label">Cargo</label>
+    <select name="cargo" class="form-select">
+      <option value="operario">Operario</option>
+      <option value="ayudante">Ayudante</option>
+      <option value="supervisor">Supervisor</option>
+    </select>
+  </div>
+  <div class="col-md-6">
+    <label class="form-label">Asignar a cuadrilla (opcional)</label>
+    <select name="cuadrilla" class="form-select">
+      <option value="">— Sin asignar —</option>
+      {% for c in cuadrillas %}
+        <option value="{{ c.id }}">{{ c.nombre }} · {{ c.proyecto.nombre }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-12">
+    <button class="btn btn-primary">Crear Trabajador</button>
+  </div>
+</form>
+{% endblock %}

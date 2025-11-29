@@ -155,23 +155,20 @@ def cuadrilla_view(request):
             if not proyecto_id:
                 messages.error(request, "Debe seleccionar un proyecto.")
                 return redirect("cuadrilla")
-            # Verificar si se están creando trabajadores nuevos sin usuario
-            trabajadores_nuevos = []
+            # Nota: La creación de trabajadores nuevos se ha movido a la vista específica
+            # `agregar_trabajador`. Si se envían campos de trabajadores nuevos aquí,
+            # pedir al usuario que use la vista dedicada.
             nombres_nuevos = request.POST.getlist("nombre_trabajador_nuevo")
             apellidos_nuevos = request.POST.getlist("apellido_trabajador_nuevo")
             cargos_nuevos = request.POST.getlist("cargo_trabajador_nuevo")
-            
-            for i in range(len(nombres_nuevos)):
-                if nombres_nuevos[i].strip() and apellidos_nuevos[i].strip() and cargos_nuevos[i]:
-                    trabajadores_nuevos.append({
-                        'nombre': nombres_nuevos[i].strip(),
-                        'apellido': apellidos_nuevos[i].strip(),
-                        'cargo': cargos_nuevos[i]
-                    })
-            
-            if not integrantes_ids and not trabajadores_nuevos:
+            trabajadores_nuevos_presentes = any(x.strip() for x in nombres_nuevos + apellidos_nuevos + cargos_nuevos)
+
+            if not integrantes_ids and not trabajadores_nuevos_presentes:
                 messages.error(request, "Debe seleccionar al menos un integrante o crear un trabajador nuevo.")
                 return redirect("cuadrilla")
+            if trabajadores_nuevos_presentes:
+                messages.info(request, "Para agregar trabajadores sin usuario, use la página 'Agregar Trabajador'.")
+                return redirect('agregar_trabajador')
 
             cargo_validos = dict(Integrante.CARGO_CHOICES).keys()
             estado_validos = dict(Integrante.ESTADO_CHOICES).keys()
@@ -214,28 +211,41 @@ def cuadrilla_view(request):
                 integrantes_resumen = []
                 lider_asignado = None
                 lideres_count = 0
-                
-                # Crear trabajadores nuevos sin usuario
-                for trabajador_nuevo in trabajadores_nuevos:
-                    cargo_trab = trabajador_nuevo['cargo']
-                    if cargo_trab == 'lider':
-                        lideres_count += 1
-                    nuevo_integrante = Integrante.objects.create(
-                        nombre_trabajador=trabajador_nuevo['nombre'],
-                        apellido_trabajador=trabajador_nuevo['apellido'],
-                        cargo=cargo_trab,
-                        cuadrilla=cuadrilla,
-                        estado='asignado'
-                    )
-                    integrantes_resumen.append(
-                        f"{nuevo_integrante.get_nombre_completo()} ({nuevo_integrante.get_cargo_display()} · {nuevo_integrante.get_estado_display()})"
-                    )
-                    if cargo_trab == 'lider':
-                        lider_asignado = nuevo_integrante
-                
+
                 # Procesar integrantes existentes
                 for integrante, rol, estado_trabajador in integrantes_payload:
-                    estado_final = estado_trabajador if estado_trabajador != 'disponible' else 'asignado'
+                    # Manejo especial: si se está marcando a un trabajador registrado en 'licencia',
+                    # exigir rango de fechas y evitar que sea Felipe Chamorro.
+                    if estado_trabajador == 'licencia' and integrante.usuario:
+                        # Verificar nombre Felipe Chamorro
+                        user = integrante.usuario
+                        if (user.first_name == 'Felipe' and user.last_name == 'Chamorro') or integrante.get_nombre_completo() == 'Felipe Chamorro':
+                            messages.error(request, f"El usuario {integrante.get_nombre_completo()} no puede ser puesto en licencia.")
+                            return redirect('cuadrilla')
+
+                        inicio = request.POST.get(f"licencia_inicio_{integrante.id}")
+                        fin = request.POST.get(f"licencia_fin_{integrante.id}")
+                        if not inicio or not fin:
+                            messages.error(request, f"Debe indicar rango de fecha de licencia para {integrante.get_nombre_completo()}.")
+                            return redirect('cuadrilla')
+                        try:
+                            fecha_inicio = timezone.datetime.strptime(inicio, "%Y-%m-%d").date()
+                            fecha_fin = timezone.datetime.strptime(fin, "%Y-%m-%d").date()
+                        except ValueError:
+                            messages.error(request, f"Formato de fecha inválido para licencia de {integrante.get_nombre_completo()}.")
+                            return redirect('cuadrilla')
+                        if fecha_inicio < timezone.now().date():
+                            messages.error(request, "La fecha de inicio de la licencia debe ser a partir de la fecha actual.")
+                            return redirect('cuadrilla')
+                        if fecha_fin < fecha_inicio:
+                            messages.error(request, "La fecha de fin de la licencia no puede ser anterior a la fecha de inicio.")
+                            return redirect('cuadrilla')
+                        integrante.licencia_inicio = fecha_inicio
+                        integrante.licencia_fin = fecha_fin
+                        estado_final = 'licencia'
+                    else:
+                        estado_final = estado_trabajador if estado_trabajador != 'disponible' else 'asignado'
+
                     integrante.cargo = rol
                     integrante.estado = estado_final
                     integrante.cuadrilla = cuadrilla
@@ -300,6 +310,7 @@ def ver_cuadrilla(request, cuadrilla_id):
 # EDITAR CUADRILLA
 # ======================
 
+@login_required
 def editar_cuadrilla(request, cuadrilla_id):
     cuadrilla = get_object_or_404(Cuadrilla, id=cuadrilla_id)
     proyectos = Proyecto.objects.all()
@@ -320,6 +331,35 @@ def editar_cuadrilla(request, cuadrilla_id):
         # Asignar integrantes seleccionados
         for integrante_id in seleccionados_ids:
             integrante = Integrante.objects.get(id=integrante_id)
+            # Si se coloca en licencia a un usuario registrado, validar fechas y proteger a Felipe Chamorro
+            estado_trabajador = request.POST.get(f"estado_{integrante_id}", integrante.estado)
+            if estado_trabajador == 'licencia' and integrante.usuario:
+                user = integrante.usuario
+                if (user.first_name == 'Felipe' and user.last_name == 'Chamorro') or integrante.get_nombre_completo() == 'Felipe Chamorro':
+                    messages.error(request, f"El usuario {integrante.get_nombre_completo()} no puede ser puesto en licencia.")
+                    return redirect('editar_cuadrilla', cuadrilla_id=cuadrilla.id)
+
+                inicio = request.POST.get(f"licencia_inicio_{integrante_id}")
+                fin = request.POST.get(f"licencia_fin_{integrante_id}")
+                if not inicio or not fin:
+                    messages.error(request, f"Debe indicar rango de fecha de licencia para {integrante.get_nombre_completo()}.")
+                    return redirect('editar_cuadrilla', cuadrilla_id=cuadrilla.id)
+                try:
+                    fecha_inicio = timezone.datetime.strptime(inicio, "%Y-%m-%d").date()
+                    fecha_fin = timezone.datetime.strptime(fin, "%Y-%m-%d").date()
+                except ValueError:
+                    messages.error(request, f"Formato de fecha inválido para licencia de {integrante.get_nombre_completo()}.")
+                    return redirect('editar_cuadrilla', cuadrilla_id=cuadrilla.id)
+                if fecha_inicio < timezone.now().date():
+                    messages.error(request, "La fecha de inicio de la licencia debe ser a partir de la fecha actual.")
+                    return redirect('editar_cuadrilla', cuadrilla_id=cuadrilla.id)
+                if fecha_fin < fecha_inicio:
+                    messages.error(request, "La fecha de fin de la licencia no puede ser anterior a la fecha de inicio.")
+                    return redirect('editar_cuadrilla', cuadrilla_id=cuadrilla.id)
+                integrante.licencia_inicio = fecha_inicio
+                integrante.licencia_fin = fecha_fin
+                integrante.estado = 'licencia'
+
             integrante.cuadrilla = cuadrilla
             integrante.save()
 
@@ -333,10 +373,55 @@ def editar_cuadrilla(request, cuadrilla_id):
     })
 
 
+@login_required
+def agregar_trabajador(request):
+    """Vista para agregar un trabajador sin usuario (operario/ayudante/supervisor)."""
+    if request.method == 'POST':
+        nombre = request.POST.get('nombre_trabajador', '').strip()
+        apellido = request.POST.get('apellido_trabajador', '').strip()
+        cargo = request.POST.get('cargo', 'operario')
+        cuadrilla_id = request.POST.get('cuadrilla')
+
+        if not nombre or not apellido:
+            messages.error(request, 'Debe indicar nombre y apellido.')
+            return redirect('agregar_trabajador')
+
+        cuadrilla = None
+        if cuadrilla_id:
+            cuadrilla = get_object_or_404(Cuadrilla, id=cuadrilla_id)
+
+        integrante = Integrante.objects.create(
+            nombre_trabajador=nombre,
+            apellido_trabajador=apellido,
+            cargo=cargo,
+            cuadrilla=cuadrilla,
+            estado='asignado' if cuadrilla else 'disponible'
+        )
+        messages.success(request, f"✅ Trabajador {integrante.get_nombre_completo()} creado correctamente.")
+        return redirect('cuadrilla')
+
+    proyectos = Proyecto.objects.all()
+    cuadrillas = Cuadrilla.objects.all()
+    return render(request, 'core/trabajador_form.html', {'cuadrillas': cuadrillas, 'proyectos': proyectos})
+
+
+@login_required
+def eliminar_integrante(request, integrante_id):
+    integrante = get_object_or_404(Integrante, id=integrante_id)
+    if integrante.usuario is not None:
+        messages.error(request, 'Solo se pueden eliminar trabajadores sin usuario desde esta acción.')
+        return redirect('cuadrilla')
+    if request.method == 'POST':
+        integrante.delete()
+        messages.success(request, '✅ Trabajador eliminado correctamente.')
+    return redirect('cuadrilla')
+
+
 # ======================
 # ELIMINAR CUADRILLA
 # ======================
 
+@login_required
 def eliminar_cuadrilla(request, cuadrilla_id):
     cuadrilla = get_object_or_404(Cuadrilla, id=cuadrilla_id)
     if request.method == "POST":
@@ -357,16 +442,19 @@ def reasignacion_view(request):
     Vista para gestionar reasignaciones de trabajadores con sistema de solicitudes.
     """
     trabajadores = Integrante.objects.select_related("cuadrilla", "usuario").filter(cuadrilla__isnull=False)
+    trabajadores_noasignados = Integrante.objects.select_related("usuario").filter(cuadrilla__isnull=True)
     cuadrillas = Cuadrilla.objects.select_related("proyecto").all()
     solicitudes = SolicitudReasignacion.objects.select_related(
         "trabajador", "cuadrilla_origen", "cuadrilla_destino", "respondido_por"
     ).order_by("-fecha_solicitud")
     
     # Filtrar solicitudes según el rol del usuario
-    if hasattr(request.user, 'perfil') and request.user.perfil.rol == 'lider_cuadrilla':
+    user_is_lider = False
+    if request.user.is_authenticated and hasattr(request.user, 'perfil') and request.user.perfil.rol == 'lider_cuadrilla':
         # Los líderes solo ven solicitudes de sus cuadrillas
         cuadrillas_lider = Cuadrilla.objects.filter(trabajador__usuario=request.user)
         solicitudes = solicitudes.filter(cuadrilla_destino__in=cuadrillas_lider)
+        user_is_lider = True
     
     if request.method == "POST":
         accion = request.POST.get("accion")
@@ -410,6 +498,31 @@ def reasignacion_view(request):
                 motivo=motivo
             )
             messages.success(request, "✅ Solicitud de reasignación enviada correctamente.")
+            return redirect("reasignacion")
+
+        elif accion == "agregar_noasignado":
+            trabajador_id = request.POST.get("trabajador_id")
+            cuadrilla_destino_id = request.POST.get("cuadrilla_destino")
+
+            if not trabajador_id or not cuadrilla_destino_id:
+                messages.error(request, "Debe seleccionar el trabajador y la cuadrilla destino.")
+                return redirect("reasignacion")
+
+            trabajador = get_object_or_404(Integrante, id=trabajador_id)
+            cuadrilla_destino = get_object_or_404(Cuadrilla, id=cuadrilla_destino_id)
+
+            if trabajador.cuadrilla is not None:
+                messages.error(request, "El trabajador ya está asignado a una cuadrilla.")
+                return redirect("reasignacion")
+
+            trabajador.cuadrilla = cuadrilla_destino
+            trabajador.estado = 'asignado'
+            trabajador.save()
+
+            descripcion = f"{trabajador.get_nombre_completo()} fue agregado a {cuadrilla_destino.nombre} desde estado no asignado."
+            registrar_cambio(cuadrilla_destino, "agregar_noasignado", descripcion)
+
+            messages.success(request, "✅ Trabajador no asignado agregado correctamente a la cuadrilla.")
             return redirect("reasignacion")
         
         elif accion == "responder_solicitud":
@@ -465,6 +578,8 @@ def reasignacion_view(request):
         "trabajadores": trabajadores,
         "cuadrillas": cuadrillas,
         "solicitudes": solicitudes,
+        "user_is_lider": user_is_lider,
+        "trabajadores_noasignados": trabajadores_noasignados,
     })
 
 

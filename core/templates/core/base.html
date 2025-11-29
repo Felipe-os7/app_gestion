@@ -301,11 +301,20 @@
                                 <span>Proyectos</span>
                             </a>
                         </li>
+                        
                         <li class="nav-item">
                             <a class="nav-link {% if request.resolver_match.url_name == 'cuadrilla' %}active{% endif %}" href="{% url 'cuadrilla' %}">
                                 <i class="bi bi-people-fill"></i>
                                 <span>Cuadrillas</span>
                             </a>
+                        </li>
+                        <li class="nav-item">
+                            {% if request.user.is_authenticated %}
+                            <a class="nav-link {% if request.resolver_match.url_name == 'agregar_trabajador' %}active{% endif %}" href="{% url 'agregar_trabajador' %}">
+                                <i class="bi bi-person-plus"></i>
+                                <span>Agregar Trabajador</span>
+                            </a>
+                            {% endif %}
                         </li>
                         <li class="nav-item">
                             <a class="nav-link {% if request.resolver_match.url_name == 'reasignacion' %}active{% endif %}" href="{% url 'reasignacion' %}">

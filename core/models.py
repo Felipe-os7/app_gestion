@@ -97,6 +97,8 @@ class Integrante(models.Model):
     estado = models.CharField("Estado del trabajador", max_length=15, choices=ESTADO_CHOICES, default='disponible')
     fecha_actualizacion = models.DateTimeField(auto_now=True)
     notas = models.TextField("Notas internas", blank=True)
+    licencia_inicio = models.DateField("Inicio de licencia", null=True, blank=True)
+    licencia_fin = models.DateField("Fin de licencia", null=True, blank=True)
 
     class Meta:
         verbose_name = "Integrante"

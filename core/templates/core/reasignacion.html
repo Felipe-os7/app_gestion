@@ -56,6 +56,43 @@
   </div>
 </div>
 
+<!-- Formulario para agregar trabajadores no asignados directamente a una cuadrilla -->
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-header bg-white">
+    <h5 class="mb-0">Agregar Trabajador No Asignado</h5>
+    <small class="text-muted">Asigne directamente un trabajador que actualmente no pertenece a ninguna cuadrilla.</small>
+  </div>
+  <div class="card-body">
+    <form method="post" class="row g-3">
+      {% csrf_token %}
+      <input type="hidden" name="accion" value="agregar_noasignado">
+      <div class="col-md-6">
+        <label class="form-label">Trabajador no asignado</label>
+        <select name="trabajador_id" class="form-select" required>
+          <option value="" selected disabled>— Seleccione un trabajador no asignado —</option>
+          {% for trabajador in trabajadores_noasignados %}
+            <option value="{{ trabajador.id }}">{{ trabajador.get_nombre_completo }} · {{ trabajador.get_cargo_display }}</option>
+          {% empty %}
+            <option disabled>No hay trabajadores sin asignar</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Cuadrilla Destino</label>
+        <select name="cuadrilla_destino" class="form-select" required>
+          <option value="" selected disabled>— Seleccione cuadrilla destino —</option>
+          {% for cuadrilla in cuadrillas %}
+            <option value="{{ cuadrilla.id }}">{{ cuadrilla.nombre }} · {{ cuadrilla.proyecto.nombre }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-12">
+        <button type="submit" class="btn btn-primary">➕ Agregar a Cuadrilla</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <!-- Lista de solicitudes -->
 <div class="card border-0 shadow-sm">
   <div class="card-header bg-white d-flex justify-content-between align-items-center">
@@ -93,8 +130,8 @@
           </td>
           <td>{{ solicitud.fecha_solicitud|date:"d/m/Y H:i" }}</td>
           <td>
-            {% if solicitud.estado == 'pendiente' %}
-              {% if request.user.is_authenticated and hasattr(request.user, 'perfil') and request.user.perfil.rol == 'lider_cuadrilla' %}
+              {% if solicitud.estado == 'pendiente' %}
+              {% if user_is_lider %}
                 {% if solicitud.cuadrilla_destino.trabajador and solicitud.cuadrilla_destino.trabajador.usuario == request.user %}
                   <form method="post" class="d-inline">
                     {% csrf_token %}

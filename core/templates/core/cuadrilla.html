@@ -116,107 +116,96 @@
 
     <div class="col-12 mt-3">
       <div class="card border-0 shadow-sm mb-3">
-        <div class="card-header bg-white">
-          <h5 class="mb-0">Agregar Trabajadores Nuevos (Sin Usuario)</h5>
-          <small class="text-muted">Puede agregar operarios, supervisores y ayudantes sin necesidad de que estén registrados en el sistema.</small>
         </div>
-        <div class="card-body">
-          <div id="trabajadores-nuevos-container">
-            <div class="row g-3 trabajador-nuevo-item">
-              <div class="col-md-4">
-                <label class="form-label">Nombre</label>
-                <input type="text" name="nombre_trabajador_nuevo" class="form-control form-control-sm" placeholder="Nombre">
-              </div>
-              <div class="col-md-4">
-                <label class="form-label">Apellido</label>
-                <input type="text" name="apellido_trabajador_nuevo" class="form-control form-control-sm" placeholder="Apellido">
-              </div>
-              <div class="col-md-3">
-                <label class="form-label">Cargo</label>
-                <select name="cargo_trabajador_nuevo" class="form-select form-select-sm">
-                  <option value="operario">Operario</option>
-                  <option value="ayudante">Ayudante</option>
-                  <option value="supervisor">Supervisor</option>
-                </select>
-              </div>
-              <div class="col-md-1 d-flex align-items-end">
-                <button type="button" class="btn btn-sm btn-danger remove-trabajador-nuevo" style="display: none;">✗</button>
-              </div>
+        <div class="card border-0 shadow-sm">
+          <div class="card-header bg-white d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
+            <div>
+              <h5 class="mb-0">Seleccionar y definir roles del equipo</h5>
+              <small class="text-muted">Seleccione los trabajadores registrados y defina su rol y estado dentro de la cuadrilla.</small>
+            </div>
+            <div class="w-100 w-md-50">
+              <input type="search" id="filtro-integrantes" class="form-control form-control-sm" placeholder="Buscar trabajador por nombre">
             </div>
           </div>
-          <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="agregar-trabajador-nuevo">+ Agregar Otro Trabajador</button>
-        </div>
-      </div>
-      
-      <div class="card border-0 shadow-sm">
-        <div class="card-header bg-white d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
-          <div>
-            <h5 class="mb-0">Seleccionar y definir roles del equipo</h5>
-            <small class="text-muted">Seleccione los trabajadores registrados y defina su rol y estado dentro de la cuadrilla.</small>
-          </div>
-          <div class="w-100 w-md-50">
-            <input type="search" id="filtro-integrantes" class="form-control form-control-sm" placeholder="Buscar trabajador por nombre">
-          </div>
-        </div>
-        <div class="table-responsive">
-          <table class="table table-hover align-middle mb-0" id="tabla-integrantes">
-            <thead class="table-light">
-              <tr>
-                <th scope="col">Seleccionar</th>
-                <th scope="col">Trabajador</th>
-                <th scope="col">Rol dentro de la cuadrilla</th>
-                <th scope="col">Estado operativo</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for i in integrantes_form %}
-              <tr data-nombre="{{ i.nombre|lower }}">
-                <td style="width: 90px;">
-                  <div class="form-check">
-                    <input class="form-check-input integrante-check" type="checkbox" name="integrantes" value="{{ i.id }}" id="integrante-{{ i.id }}" {% if cuadrilla and i.cuadrilla and i.cuadrilla.id == cuadrilla.id %}checked{% endif %}>
-                  </div>
-                </td>
-                <td>
-                  <label class="fw-semibold mb-0" for="integrante-{{ i.id }}">{{ i.nombre }}</label>
-                  <div class="small text-muted">
-                    Cargo base: {{ i.get_cargo_display }} ·
-                    {% if i.cuadrilla %}
-                      {% if cuadrilla and i.cuadrilla.id == cuadrilla.id %}
-                        Asignado a esta cuadrilla
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="tabla-integrantes">
+              <thead class="table-light">
+                <tr>
+                  <th scope="col">Seleccionar</th>
+                  <th scope="col">Trabajador</th>
+                  <th scope="col">Rol dentro de la cuadrilla</th>
+                  <th scope="col">Estado operativo</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for i in integrantes_form %}
+                <tr data-nombre="{{ i.nombre|lower }}">
+                  <td style="width: 90px;">
+                    <div class="form-check">
+                      <input class="form-check-input integrante-check" type="checkbox" name="integrantes" value="{{ i.id }}" id="integrante-{{ i.id }}" {% if cuadrilla and i.cuadrilla and i.cuadrilla.id == cuadrilla.id %}checked{% endif %}>
+                    </div>
+                  </td>
+                  <td>
+                    <label class="fw-semibold mb-0" for="integrante-{{ i.id }}">{{ i.nombre }}</label>
+                    <div class="small text-muted">
+                      Cargo base: {{ i.get_cargo_display }} ·
+                      {% if i.cuadrilla %}
+                        {% if cuadrilla and i.cuadrilla.id == cuadrilla.id %}
+                          Asignado a esta cuadrilla
+                        {% else %}
+                          Actualmente en <span class="badge bg-light text-dark">{{ i.cuadrilla.nombre }}</span>
+                        {% endif %}
                       {% else %}
-                        Actualmente en <span class="badge bg-light text-dark">{{ i.cuadrilla.nombre }}</span>
+                        Disponible
                       {% endif %}
-                    {% else %}
-                      Disponible
+                    </div>
+                  </td>
+                  <td style="width: 240px;">
+                    <select name="rol_{{ i.id }}" class="form-select form-select-sm control-integrante" data-checkbox="integrante-{{ i.id }}" {% if not cuadrilla or i.cuadrilla and i.cuadrilla.id != cuadrilla.id %}disabled{% endif %}>
+                      {% for clave, texto in cargo_choices %}
+                        <option value="{{ clave }}" {% if i.cargo == clave %}selected{% endif %}>{{ texto }}</option>
+                      {% endfor %}
+                    </select>
+                  </td>
+                  <td style="width: 220px;">
+                    <div class="d-flex flex-column">
+                      <select name="estado_{{ i.id }}" class="form-select form-select-sm control-integrante estado-select" data-checkbox="integrante-{{ i.id }}" data-id="{{ i.id }}" {% if not cuadrilla or i.cuadrilla and i.cuadrilla.id != cuadrilla.id %}disabled{% endif %}>
+                        {% for clave, texto in estado_choices %}
+                          {% if clave != 'disponible' or not cuadrilla or not i.cuadrilla or i.cuadrilla.id != cuadrilla.id %}
+                            <option value="{{ clave }}" {% if i.estado == clave %}selected{% elif not i.estado and clave == 'asignado' %}selected{% endif %}>{{ texto }}</option>
+                          {% endif %}
+                        {% endfor %}
+                      </select>
+                      <div class="mt-2 licencia-dates" id="licencia-box-{{ i.id }}" style="display: {% if i.estado == 'licencia' %}block{% else %}none{% endif %};">
+                        <div class="row g-2">
+                          <div class="col-6">
+                            <input type="date" name="licencia_inicio_{{ i.id }}" class="form-control form-control-sm" value="{{ i.licencia_inicio|default_if_none:'' }}" placeholder="Inicio">
+                          </div>
+                          <div class="col-6">
+                            <input type="date" name="licencia_fin_{{ i.id }}" class="form-control form-control-sm" value="{{ i.licencia_fin|default_if_none:'' }}" placeholder="Fin">
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td style="width: 90px;">
+                    {% if not i.usuario %}
+                      <form method="post" action="{% url 'eliminar_integrante' i.id %}" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-danger">Eliminar</button>
+                      </form>
                     {% endif %}
-                  </div>
-                </td>
-                <td style="width: 240px;">
-                  <select name="rol_{{ i.id }}" class="form-select form-select-sm control-integrante" data-checkbox="integrante-{{ i.id }}" {% if not cuadrilla or not i.cuadrilla or i.cuadrilla.id != cuadrilla.id %}disabled{% endif %}>
-                    {% for clave, texto in cargo_choices %}
-                      <option value="{{ clave }}" {% if i.cargo == clave %}selected{% endif %}>{{ texto }}</option>
-                    {% endfor %}
-                  </select>
-                </td>
-                <td style="width: 220px;">
-                  <select name="estado_{{ i.id }}" class="form-select form-select-sm control-integrante" data-checkbox="integrante-{{ i.id }}" {% if not cuadrilla or not i.cuadrilla or i.cuadrilla.id != cuadrilla.id %}disabled{% endif %}>
-                    {% for clave, texto in estado_choices %}
-                      {% if clave != 'disponible' or not cuadrilla or not i.cuadrilla or i.cuadrilla.id != cuadrilla.id %}
-                        <option value="{{ clave }}" {% if i.estado == clave %}selected{% elif not i.estado and clave == 'asignado' %}selected{% endif %}>{{ texto }}</option>
-                      {% endif %}
-                    {% endfor %}
-                  </select>
-                </td>
-              </tr>
-              {% empty %}
-              <tr>
-                <td colspan="4" class="text-center text-muted py-4">No hay trabajadores disponibles para asignar.</td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="4" class="text-center text-muted py-4">No hay trabajadores disponibles para asignar.</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
     </div>
   </div>
 
@@ -227,42 +216,7 @@
   </div>
 </form>
 
-<!-- Formulario rápido para mover trabajadores entre cuadrillas -->
-<div class="card border-0 shadow-sm mb-4">
-  <div class="card-header bg-white">
-    <h5 class="mb-0">Reubicar trabajadores</h5>
-    <small class="text-muted">Mueva un trabajador a otra cuadrilla sin editar manualmente ambas.</small>
-  </div>
-  <div class="card-body">
-    <form method="post" class="row g-3 align-items-end">
-      {% csrf_token %}
-      <input type="hidden" name="accion" value="reubicar">
-      <div class="col-md-5">
-        <label class="form-label">Trabajador</label>
-        <select name="integrante_id" class="form-select" {% if not integrantes_reubicables %}disabled{% endif %}>
-          <option value="" selected disabled>— Seleccione un trabajador —</option>
-          {% for integrante in integrantes_reubicables %}
-            <option value="{{ integrante.id }}">{{ integrante.nombre }} · {{ integrante.cuadrilla.nombre }}</option>
-          {% empty %}
-            <option disabled>No hay trabajadores asignados</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="col-md-5">
-        <label class="form-label">Cuadrilla destino</label>
-        <select name="cuadrilla_destino" class="form-select" {% if not integrantes_reubicables %}disabled{% endif %}>
-          <option value="" selected disabled>— Seleccione cuadrilla —</option>
-          {% for c in cuadrillas %}
-            <option value="{{ c.id }}">{{ c.nombre }} · {{ c.proyecto.nombre }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="col-md-2 d-grid">
-        <button class="btn btn-outline-primary" {% if not integrantes_reubicables %}disabled{% endif %}>➡️ Reubicar</button>
-      </div>
-    </form>
-  </div>
-</div>
+
 
 <!-- Historial de cambios -->
 <div class="card border-0 shadow-sm mt-5">
@@ -316,44 +270,19 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  // Manejo de trabajadores nuevos
-  const container = document.getElementById("trabajadores-nuevos-container");
-  const agregarBtn = document.getElementById("agregar-trabajador-nuevo");
-  
-  function actualizarBotonesEliminar() {
-    const items = container.querySelectorAll(".trabajador-nuevo-item");
-    items.forEach(function(item, index) {
-      const btnEliminar = item.querySelector(".remove-trabajador-nuevo");
-      if (items.length > 1) {
-        btnEliminar.style.display = "block";
-      } else {
-        btnEliminar.style.display = "none";
-      }
-    });
-  }
-
-  if (agregarBtn) {
-    agregarBtn.addEventListener("click", function() {
-      const nuevoItem = container.querySelector(".trabajador-nuevo-item").cloneNode(true);
-      nuevoItem.querySelectorAll("input, select").forEach(function(input) {
-        input.value = "";
-      });
-      container.appendChild(nuevoItem);
-      actualizarBotonesEliminar();
-    });
-  }
-
-  container.addEventListener("click", function(e) {
-    if (e.target.classList.contains("remove-trabajador-nuevo")) {
-      const item = e.target.closest(".trabajador-nuevo-item");
-      if (container.querySelectorAll(".trabajador-nuevo-item").length > 1) {
-        item.remove();
-        actualizarBotonesEliminar();
-      }
-    }
-  });
-
-  actualizarBotonesEliminar();
+  // No inline "trabajadores nuevos" UI — use dedicated view
 });
+
+  // Mostrar/ocultar inputs de licencia según valor del select
+  document.querySelectorAll('.estado-select').forEach(function(select){
+    function sync(){
+      var id = select.dataset.id;
+      var box = document.getElementById('licencia-box-' + id);
+      if(!box) return;
+      box.style.display = select.value === 'licencia' ? 'block' : 'none';
+    }
+    select.addEventListener('change', sync);
+    sync();
+  });
 </script>
 {% endblock scripts %}

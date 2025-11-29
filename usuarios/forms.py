@@ -3,6 +3,23 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 from .models import PerfilUsuario
 from core.models import Integrante
+from django import forms
+from django.contrib.auth.forms import AuthenticationForm
+
+
+class CustomAuthenticationForm(AuthenticationForm):
+    """Bloquea el login de usuarios que estén en licencia."""
+    def confirm_login_allowed(self, user):
+        super().confirm_login_allowed(user)
+        try:
+            integrante = user.integrante
+            if integrante.estado == 'licencia':
+                raise forms.ValidationError(
+                    "Tu cuenta se encuentra en licencia y no puede iniciar sesión.",
+                    code='inactive',
+                )
+        except Integrante.DoesNotExist:
+            pass
 
 
 class RegistroUsuarioForm(UserCreationForm):
