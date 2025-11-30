@@ -192,6 +192,10 @@ def cuadrilla_view(request):
             integrantes_payload = []
             for integrante_id in integrantes_ids:
                 integrante = get_object_or_404(Integrante, id=integrante_id)
+                # No permitir seleccionar trabajadores que estén en licencia
+                if integrante.estado == 'licencia' and not (cuadrilla and integrante.cuadrilla and integrante.cuadrilla.id == cuadrilla.id):
+                    messages.error(request, f"No se puede seleccionar a {integrante.get_nombre_completo()} porque está en licencia.")
+                    return redirect("cuadrilla")
                 rol = request.POST.get(f"rol_{integrante_id}", integrante.cargo)
                 estado_trabajador = request.POST.get(f"estado_{integrante_id}", 'asignado')
                 if rol not in cargo_validos:
@@ -354,6 +358,10 @@ def editar_cuadrilla(request, cuadrilla_id):
         # Asignar integrantes seleccionados
         for integrante_id in seleccionados_ids:
             integrante = Integrante.objects.get(id=integrante_id)
+            # No permitir agregar a la cuadrilla un trabajador que esté en licencia
+            if integrante.estado == 'licencia' and not (integrante.cuadrilla and integrante.cuadrilla.id == cuadrilla.id):
+                messages.error(request, f"No se puede seleccionar a {integrante.get_nombre_completo()} porque está en licencia.")
+                return redirect('editar_cuadrilla', cuadrilla_id=cuadrilla.id)
             # Si se coloca en licencia a un usuario registrado, validar fechas y proteger a Felipe Chamorro
             estado_trabajador = request.POST.get(f"estado_{integrante_id}", integrante.estado)
             if estado_trabajador == 'licencia' and integrante.usuario:

@@ -140,9 +140,18 @@
               <tbody>
                 {% for i in integrantes_form %}
                 <tr data-nombre="{{ i.nombre|lower }}">
-                  <td style="width: 90px;">
+                    <td style="width: 90px;">
                     <div class="form-check">
-                      <input class="form-check-input integrante-check" type="checkbox" name="integrantes" value="{{ i.id }}" id="integrante-{{ i.id }}" {% if cuadrilla and i.cuadrilla and i.cuadrilla.id == cuadrilla.id %}checked{% endif %}>
+                      {# Determinar si el trabajador está en licencia y permitir sólo si ya pertenece a la cuadrilla actual #}
+                      {% if i.estado == 'licencia' %}
+                        {% if cuadrilla and i.cuadrilla and i.cuadrilla.id == cuadrilla.id %}
+                          <input class="form-check-input integrante-check" type="checkbox" name="integrantes" value="{{ i.id }}" id="integrante-{{ i.id }}" {% if cuadrilla and i.cuadrilla and i.cuadrilla.id == cuadrilla.id %}checked{% endif %}>
+                        {% else %}
+                          <input class="form-check-input integrante-check" type="checkbox" name="integrantes" value="{{ i.id }}" id="integrante-{{ i.id }}" disabled title="No se puede seleccionar: trabajador en licencia">
+                        {% endif %}
+                      {% else %}
+                        <input class="form-check-input integrante-check" type="checkbox" name="integrantes" value="{{ i.id }}" id="integrante-{{ i.id }}" {% if cuadrilla and i.cuadrilla and i.cuadrilla.id == cuadrilla.id %}checked{% endif %}>
+                      {% endif %}
                     </div>
                   </td>
                   <td>
