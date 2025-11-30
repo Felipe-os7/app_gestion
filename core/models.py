@@ -11,7 +11,7 @@ class Proyecto(models.Model):
     ]
 
     codigo = models.AutoField(primary_key=True)
-    nombre = models.CharField("Nombre del proyecto", max_length=100)
+    nombre = models.CharField("Nombre del proyecto", max_length=100, unique=True)
     cliente = models.CharField("Cliente", max_length=100)
     estado = models.CharField("Estado", max_length=20, choices=ESTADO_CHOICES, default='planificado')
     fecha_inicio = models.DateField("Fecha de inicio", default=timezone.now)
@@ -25,6 +25,9 @@ class Proyecto(models.Model):
         verbose_name = "Proyecto"
         verbose_name_plural = "Proyectos"
         ordering = ["-fecha_inicio"]
+        constraints = [
+            models.UniqueConstraint(fields=['nombre'], name='unique_proyecto_nombre'),
+        ]
 
     def __str__(self):
         return self.nombre
@@ -58,6 +61,9 @@ class Cuadrilla(models.Model):
         verbose_name = "Cuadrilla"
         verbose_name_plural = "Cuadrillas"
         ordering = ["nombre"]
+        constraints = [
+            models.UniqueConstraint(fields=['nombre'], name='unique_cuadrilla_nombre'),
+        ]
 
     def __str__(self):
         return self.nombre

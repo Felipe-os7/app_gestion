@@ -55,8 +55,14 @@ def proyecto_view(request):
             messages.error(request, "Formato de fecha inválido. Use AAAA-MM-DD.")
             return redirect("proyecto")
 
+        nombre = request.POST.get("nombre", "").strip()
+        # Validación: evitar nombres duplicados (case-insensitive)
+        if Proyecto.objects.filter(nombre__iexact=nombre).exists():
+            messages.error(request, "Ya existe un proyecto con ese nombre. Elija otro nombre.")
+            return redirect("proyecto")
+
         Proyecto.objects.create(
-            nombre=request.POST.get("nombre", "").strip(),
+            nombre=nombre,
             cliente=request.POST.get("cliente", "").strip(),
             estado=request.POST.get("estado", "planificado"),
             fecha_inicio=fecha_inicio,
@@ -155,6 +161,17 @@ def cuadrilla_view(request):
             if not proyecto_id:
                 messages.error(request, "Debe seleccionar un proyecto.")
                 return redirect("cuadrilla")
+
+            # Validaciones: nombre único y un proyecto sólo puede tener una cuadrilla
+            # Excluir la cuadrilla actual (si se está editando)
+            existing_nombre_qs = Cuadrilla.objects.filter(nombre__iexact=nombre)
+            if cuadrilla_id:
+                existing_nombre_qs = existing_nombre_qs.exclude(id=cuadrilla_id)
+            if existing_nombre_qs.exists():
+                messages.error(request, "Ya existe una cuadrilla con ese nombre. Elija otro nombre.")
+                return redirect("cuadrilla")
+
+            # Nota: permitimos múltiples cuadrillas por proyecto — no validar proyecto único
             # Nota: La creación de trabajadores nuevos se ha movido a la vista específica
             # `agregar_trabajador`. Si se envían campos de trabajadores nuevos aquí,
             # pedir al usuario que use la vista dedicada.
@@ -320,6 +337,12 @@ def editar_cuadrilla(request, cuadrilla_id):
         cuadrilla.nombre = request.POST.get("nombre", "").strip()
         cuadrilla.proyecto_id = request.POST.get("proyecto")
         cuadrilla.estado = request.POST.get("estado", "activa")
+        # Validaciones: evitar duplicados de nombre y de proyecto
+        if Cuadrilla.objects.filter(nombre__iexact=cuadrilla.nombre).exclude(id=cuadrilla.id).exists():
+            messages.error(request, "Ya existe una cuadrilla con ese nombre. Elija otro nombre.")
+            return redirect('editar_cuadrilla', cuadrilla_id=cuadrilla.id)
+        # Permitimos múltiples cuadrillas por proyecto — no validar proyecto único
+
         cuadrilla.save()
 
         seleccionados_ids = request.POST.getlist("integrantes")

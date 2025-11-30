@@ -190,12 +190,8 @@
                   </td>
                   <td style="width: 90px;">
                     {% if not i.usuario %}
-                      <form method="post" action="{% url 'eliminar_integrante' i.id %}" class="d-inline">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-sm btn-danger">Eliminar</button>
-                      </form>
+                      <button type="button" class="btn btn-sm btn-danger btn-delete-integrante" data-url="{% url 'eliminar_integrante' i.id %}">Eliminar</button>
                     {% endif %}
-                  </td>
                 </tr>
                 {% empty %}
                 <tr>
@@ -283,6 +279,51 @@ document.addEventListener("DOMContentLoaded", function () {
     }
     select.addEventListener('change', sync);
     sync();
+  });
+
+  // Eliminar integrante vía AJAX para evitar que se someta el form padre
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+
+  document.querySelectorAll('.btn-delete-integrante').forEach(function(btn){
+    btn.addEventListener('click', function(e){
+      if (!confirm('¿Eliminar trabajador? Esta acción no se puede deshacer.')) return;
+      const url = btn.getAttribute('data-url');
+      const csrftoken = getCookie('csrftoken');
+      fetch(url, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': csrftoken,
+          'Accept': 'text/html'
+        },
+        credentials: 'same-origin'
+      }).then(function(response){
+        if (response.ok) {
+          // Recargar para reflejar el cambio
+          location.reload();
+        } else {
+          response.text().then(function(text){
+            console.error('Delete failed:', text);
+            alert('No fue posible eliminar el trabajador. Revisa la consola para más detalles.');
+          });
+        }
+      }).catch(function(err){
+        console.error('Network error deleting integrante:', err);
+        alert('Error de red al eliminar trabajador. Revisa la consola para más detalles.');
+      });
+    });
   });
 </script>
 {% endblock scripts %}
