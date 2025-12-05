@@ -22,6 +22,7 @@ urlpatterns = [
     path('cuadrilla/ver/<int:cuadrilla_id>/', views.ver_cuadrilla, name='ver_cuadrilla'),
     path('cuadrilla/editar/<int:cuadrilla_id>/', views.editar_cuadrilla, name='editar_cuadrilla'),
     path('cuadrilla/eliminar/<int:cuadrilla_id>/', views.eliminar_cuadrilla, name='eliminar_cuadrilla'),
+    path('cuadrilla/historial/', views.historial_cambios_view, name='historial_cambios'),
     path('integrante/agregar/', views.agregar_trabajador, name='agregar_trabajador'),
     path('integrante/eliminar/<int:integrante_id>/', views.eliminar_integrante, name='eliminar_integrante'),
 

@@ -169,7 +169,7 @@ def registrar_cambio(cuadrilla, accion, descripcion):
 def cuadrilla_view(request):
     proyectos = Proyecto.objects.all()
     cuadrillas = Cuadrilla.objects.select_related("proyecto", "trabajador").prefetch_related("integrantes").all()
-    historial = CambioCuadrilla.objects.select_related("cuadrilla").order_by("-fecha")[:10]
+    historial = CambioCuadrilla.objects.select_related("cuadrilla").order_by("-fecha")[:5]
 
     cuadrilla = None  # Para edición en el mismo form
     integrantes_qs = Integrante.objects.select_related("cuadrilla", "usuario").order_by("nombre_trabajador", "apellido_trabajador", "usuario__first_name", "usuario__last_name")
@@ -680,6 +680,15 @@ def reasignacion_view(request):
         "solicitudes": solicitudes,
         "user_is_lider": user_is_lider,
         "trabajadores_noasignados": trabajadores_noasignados,
+    })
+
+
+@login_required
+def historial_cambios_view(request):
+    """Vista completa del historial de cambios de cuadrillas."""
+    historial = CambioCuadrilla.objects.select_related("cuadrilla").order_by("-fecha")
+    return render(request, "core/historial_cambios.html", {
+        "historial": historial,
     })
 
 

@@ -1,0 +1,55 @@
+{% extends "core/base.html" %}
+
+{% block title %}Historial de Cambios - Cuadrillas{% endblock %}
+
+{% block content %}
+<div class="py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h2 class="mb-1">Historial de Cambios de Cuadrillas</h2>
+      <p class="text-muted mb-0">Registro completo de todas las modificaciones realizadas</p>
+    </div>
+    <a href="{% url 'cuadrilla' %}" class="btn btn-outline-secondary">⬅ Volver a Cuadrillas</a>
+  </div>
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+      <h5 class="mb-0">Todos los cambios</h5>
+      <span class="badge bg-primary text-white">{{ historial|length }} en total</span>
+    </div>
+    <ul class="list-group list-group-flush">
+      {% for item in historial %}
+      <li class="list-group-item">
+        <div class="d-flex justify-content-between align-items-start">
+          <div class="flex-grow-1">
+            <div class="d-flex align-items-center gap-2 mb-1">
+              <strong>{{ item.cuadrilla.nombre|default:"Cuadrilla eliminada" }}</strong>
+              <span class="badge 
+                {% if item.accion == 'creacion' %}bg-success
+                {% elif item.accion == 'actualizacion' %}bg-info
+                {% elif item.accion == 'reasignacion' %}bg-warning text-dark
+                {% elif item.accion == 'estado' %}bg-primary
+                {% elif item.accion == 'eliminacion' %}bg-danger
+                {% else %}bg-secondary
+                {% endif %}">
+                {{ item.get_accion_display }}
+              </span>
+            </div>
+            <p class="mb-0 text-muted small">{{ item.descripcion }}</p>
+          </div>
+          <div class="text-end ms-3">
+            <span class="text-muted small d-block">{{ item.fecha|date:"d/m/Y" }}</span>
+            <span class="text-muted small">{{ item.fecha|date:"H:i" }}</span>
+          </div>
+        </div>
+      </li>
+      {% empty %}
+      <li class="list-group-item text-center text-muted py-5">
+        <i class="bi bi-inbox" style="font-size: 3rem; opacity: 0.3;"></i>
+        <p class="mb-0 mt-2">Aún no hay registros en el historial.</p>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+{% endblock %}
