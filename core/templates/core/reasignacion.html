@@ -135,8 +135,6 @@
           <td>{{ solicitud.fecha_solicitud|date:"d/m/Y H:i" }}</td>
           <td>
             {% if solicitud.estado == 'pendiente' %}
-            {% if user_is_lider %}
-            {% if solicitud.cuadrilla_destino.trabajador and solicitud.cuadrilla_destino.trabajador.usuario == request.user %}
             <form method="post" class="d-inline">
               {% csrf_token %}
               <input type="hidden" name="accion" value="responder_solicitud">
@@ -144,12 +142,6 @@
               <button type="submit" name="respuesta" value="aceptar" class="btn btn-sm btn-success mb-1">✓ Aceptar</button>
               <button type="submit" name="respuesta" value="rechazar" class="btn btn-sm btn-danger mb-1">✗ Rechazar</button>
             </form>
-            {% else %}
-            <span class="text-muted small">Esperando respuesta del líder</span>
-            {% endif %}
-            {% else %}
-            <span class="text-muted small">Pendiente</span>
-            {% endif %}
             {% endif %}
           </td>
         </tr>

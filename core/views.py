@@ -552,15 +552,14 @@ def reasignacion_view(request):
     cuadrillas = Cuadrilla.objects.select_related("proyecto").all()
     solicitudes = SolicitudReasignacion.objects.select_related(
         "trabajador", "cuadrilla_origen", "cuadrilla_destino", "respondido_por"
-    ).order_by("-fecha_solicitud")
-    
-    # Filtrar solicitudes según el rol del usuario
-    user_is_lider = False
-    if request.user.is_authenticated and hasattr(request.user, 'perfil') and request.user.perfil.rol == 'lider_cuadrilla':
-        # Los líderes solo ven solicitudes de sus cuadrillas
-        cuadrillas_lider = Cuadrilla.objects.filter(trabajador__usuario=request.user)
-        solicitudes = solicitudes.filter(cuadrilla_destino__in=cuadrillas_lider)
-        user_is_lider = True
+    ).order_by("-fecha_solicitud")[:5]
+
+    # Flag informativo para la plantilla (sin filtrar resultados)
+    user_is_lider = bool(
+        request.user.is_authenticated
+        and hasattr(request.user, 'perfil')
+        and request.user.perfil.rol == 'lider_cuadrilla'
+    )
     
     if request.method == "POST":
         accion = request.POST.get("accion")
@@ -603,7 +602,7 @@ def reasignacion_view(request):
                 cuadrilla_destino=cuadrilla_destino,
                 motivo=motivo
             )
-            messages.success(request, "✅ Solicitud de reasignación enviada correctamente.")
+            messages.success(request, "✅ Solicitud de reasignación enviada correctamente. Se enviará un correo electrónico con el detalle.")
             return redirect("reasignacion")
 
         elif accion == "agregar_noasignado":
@@ -641,20 +640,15 @@ def reasignacion_view(request):
             
             solicitud = get_object_or_404(SolicitudReasignacion, id=solicitud_id)
             
-            # Verificar que el usuario sea el líder de la cuadrilla destino
-            if not hasattr(request.user, 'perfil') or request.user.perfil.rol != 'lider_cuadrilla':
-                messages.error(request, "Solo los líderes de cuadrilla pueden responder solicitudes.")
-                return redirect("reasignacion")
-            
-            cuadrilla_destino = solicitud.cuadrilla_destino
-            if cuadrilla_destino.trabajador and cuadrilla_destino.trabajador.usuario != request.user:
-                messages.error(request, "Solo el líder de la cuadrilla destino puede responder esta solicitud.")
+            if not request.user.is_authenticated:
+                messages.error(request, "Debe iniciar sesión para responder solicitudes.")
                 return redirect("reasignacion")
             
             if solicitud.estado != 'pendiente':
                 messages.info(request, "Esta solicitud ya fue respondida.")
                 return redirect("reasignacion")
             
+            cuadrilla_destino = solicitud.cuadrilla_destino
             if respuesta == 'aceptar':
                 solicitud.estado = 'aceptada'
                 solicitud.respondido_por = request.user

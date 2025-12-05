@@ -238,6 +238,7 @@
                         <tr>
                             <th scope="col">Nombre</th>
                             <th scope="col">Cargo</th>
+                            <th scope="col">Especialidad</th>
                             <th scope="col">Cuadrilla</th>
                             <th scope="col">Estado</th>
                         </tr>
@@ -247,6 +248,13 @@
                         <tr>
                             <td class="fw-semibold">{{ integrante.nombre }}</td>
                             <td>{{ integrante.get_cargo_display }}</td>
+                            <td>
+                                {% if integrante.especialidad %}
+                                {{ integrante.get_especialidad_display }}
+                                {% else %}
+                                <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
                             <td>
                                 {% if integrante.cuadrilla %}
                                 {{ integrante.cuadrilla.nombre }}
@@ -268,7 +276,7 @@
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="4" class="text-center text-muted py-4">Aún no se registran integrantes.</td>
+                            <td colspan="5" class="text-center text-muted py-4">Aún no se registran integrantes.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
