@@ -14,6 +14,7 @@ urlpatterns = [
 
     # Proyectos
     path('proyecto/', views.proyecto_view, name='proyecto'),
+    path('proyecto/editar/<int:codigo>/', views.editar_proyecto, name='editar_proyecto'),
     path('proyecto/eliminar/<int:codigo>/', views.eliminar_proyecto, name='eliminar_proyecto'),
 
     # Cuadrillas

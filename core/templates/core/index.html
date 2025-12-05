@@ -121,6 +121,7 @@
                             <th scope="col">Inicio</th>
                             <th scope="col">Término</th>
                             <th scope="col">Ciudad</th>
+                            <th scope="col" width="120">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -149,6 +150,14 @@
                                 {% endif %}
                             </td>
                             <td>{{ proyecto.ciudad }}</td>
+                            <td>
+                                <a href="{% url 'editar_proyecto' proyecto.codigo %}" class="btn btn-sm btn-warning" title="Editar">
+                                    <i class="bi bi-pencil-square"></i>
+                                </a>
+                                <a href="{% url 'proyecto' %}" class="btn btn-sm btn-info" title="Ver detalles">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                            </td>
                         </tr>
                         {% empty %}
                         <tr>

@@ -1,0 +1,127 @@
+{% extends "core/base.html" %}
+{% load static %}
+
+{% block title %}Editar Proyecto{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Editar Proyecto</h2>
+    <a href="{% url 'proyecto' %}" class="btn btn-secondary">← Volver</a>
+</div>
+
+<!-- Mensajes -->
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="POST">
+                    {% csrf_token %}
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="nombre" class="form-label">Nombre del Proyecto *</label>
+                            <input type="text" class="form-control" id="nombre" name="nombre" value="{{ proyecto.nombre }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="cliente" class="form-label">Cliente</label>
+                            <input type="text" class="form-control" id="cliente" name="cliente" value="{{ proyecto.cliente }}">
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="estado" class="form-label">Estado</label>
+                            <select class="form-select" id="estado" name="estado">
+                                {% for valor, etiqueta in estados %}
+                                    <option value="{{ valor }}" {% if proyecto.estado == valor %}selected{% endif %}>
+                                        {{ etiqueta }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="presupuesto" class="form-label">Presupuesto ($)</label>
+                            <input type="number" class="form-control" id="presupuesto" name="presupuesto" value="{{ proyecto.presupuesto }}" step="0.01" min="0.01">
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="fecha_inicio" class="form-label">Fecha de Inicio</label>
+                            <input type="date" class="form-control" id="fecha_inicio" name="fecha_inicio" value="{{ proyecto.fecha_inicio|date:'Y-m-d' }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="fecha_termino" class="form-label">Fecha de Término</label>
+                            <input type="date" class="form-control" id="fecha_termino" name="fecha_termino" value="{{ proyecto.fecha_termino|date:'Y-m-d' }}">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="direccion" class="form-label">Dirección</label>
+                        <input type="text" class="form-control" id="direccion" name="direccion" value="{{ proyecto.direccion }}">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="ciudad" class="form-label">Ciudad</label>
+                        <input type="text" class="form-control" id="ciudad" name="ciudad" value="{{ proyecto.ciudad }}">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="descripcion" class="form-label">Descripción</label>
+                        <textarea class="form-control" id="descripcion" name="descripcion" rows="4">{{ proyecto.descripcion }}</textarea>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle"></i> Guardar Cambios
+                        </button>
+                        <a href="{% url 'proyecto' %}" class="btn btn-secondary">Cancelar</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Información del Proyecto</h5>
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-5 text-muted">Código:</dt>
+                    <dd class="col-sm-7"><strong>#{{ proyecto.codigo }}</strong></dd>
+                    
+                    <dt class="col-sm-5 text-muted">Estado:</dt>
+                    <dd class="col-sm-7">
+                        <span class="badge bg-{% if proyecto.estado == 'completado' %}success{% elif proyecto.estado == 'en_progreso' %}warning{% elif proyecto.estado == 'cancelado' %}danger{% else %}info{% endif %}">
+                            {{ proyecto.get_estado_display }}
+                        </span>
+                    </dd>
+                    
+                    <dt class="col-sm-5 text-muted">Cuadrillas:</dt>
+                    <dd class="col-sm-7">{{ proyecto.cuadrillas.count }}</dd>
+                    
+                    <dt class="col-sm-5 text-muted">Presupuesto:</dt>
+                    <dd class="col-sm-7">${{ proyecto.presupuesto|floatformat:2 }}</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .card {
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+</style>
+{% endblock %}

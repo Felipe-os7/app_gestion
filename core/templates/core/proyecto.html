@@ -127,6 +127,7 @@
             <td>{{ p.ciudad }}</td>
             <td>{{ p.descripcion|default:"(Sin descripción)" }}</td>
             <td>
+                <a href="{% url 'editar_proyecto' p.codigo %}" class="btn btn-sm btn-warning mb-1">Editar</a>
                 <form method="post" action="{% url 'eliminar_proyecto' p.codigo %}" class="d-inline">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-sm btn-danger mb-1">Eliminar</button>

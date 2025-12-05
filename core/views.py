@@ -88,6 +88,66 @@ def eliminar_proyecto(request, codigo):
     return redirect("proyecto")
 
 
+@login_required
+def editar_proyecto(request, codigo):
+    proyecto = get_object_or_404(Proyecto, codigo=codigo)
+    
+    if request.method == "POST":
+        # Validar nombre único (excluyendo el proyecto actual)
+        nombre = request.POST.get("nombre", "").strip()
+        if nombre and Proyecto.objects.filter(nombre__iexact=nombre).exclude(codigo=codigo).exists():
+            messages.error(request, "Ya existe otro proyecto con ese nombre.")
+            return redirect("editar_proyecto", codigo=codigo)
+        
+        # Actualizar campos
+        proyecto.nombre = nombre
+        proyecto.cliente = request.POST.get("cliente", "").strip()
+        proyecto.estado = request.POST.get("estado", proyecto.estado)
+        
+        # Validar fechas
+        try:
+            fecha_inicio = request.POST.get("fecha_inicio")
+            if fecha_inicio:
+                proyecto.fecha_inicio = fecha_inicio
+            
+            fecha_termino = request.POST.get("fecha_termino")
+            if fecha_termino:
+                proyecto.fecha_termino = fecha_termino
+                if proyecto.fecha_inicio and proyecto.fecha_termino and proyecto.fecha_termino < proyecto.fecha_inicio:
+                    messages.error(request, "La fecha de término no puede ser anterior a la de inicio.")
+                    return redirect("editar_proyecto", codigo=codigo)
+        except ValueError:
+            messages.error(request, "Las fechas ingresadas no son válidas.")
+            return redirect("editar_proyecto", codigo=codigo)
+        
+        # Presupuesto
+        try:
+            presupuesto = request.POST.get("presupuesto", "0")
+            if presupuesto:
+                presupuesto = Decimal(presupuesto)
+                if presupuesto <= 0:
+                    messages.error(request, "El presupuesto debe ser mayor a 0.")
+                    return redirect("editar_proyecto", codigo=codigo)
+                proyecto.presupuesto = presupuesto
+        except (ValueError, InvalidOperation):
+            messages.error(request, "El presupuesto debe ser un número válido.")
+            return redirect("editar_proyecto", codigo=codigo)
+        
+        proyecto.direccion = request.POST.get("direccion", "").strip()
+        proyecto.ciudad = request.POST.get("ciudad", "").strip()
+        proyecto.descripcion = request.POST.get("descripcion", "").strip()
+        
+        proyecto.save()
+        messages.success(request, "✅ Proyecto actualizado correctamente.")
+        return redirect("proyecto")
+    
+    context = {
+        'proyecto': proyecto,
+        'estados': Proyecto.ESTADO_CHOICES,
+    }
+    return render(request, 'core/editar_proyecto.html', context)
+
+
 def registrar_cambio(cuadrilla, accion, descripcion):
     """
     Helper centralizado para registrar cualquier alteración a las cuadrillas.
