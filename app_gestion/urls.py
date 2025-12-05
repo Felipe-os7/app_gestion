@@ -30,4 +30,5 @@ urlpatterns = [
 
     # Exportar Excel
     path('exportar_excel/', views.exportar_excel, name='exportar_excel'),
+    path('exportar_cuadrillas/', views.exportar_cuadrillas_excel, name='exportar_cuadrillas'),
 ]

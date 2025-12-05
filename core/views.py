@@ -691,6 +691,8 @@ def reasignacion_view(request):
 
 @login_required
 def exportar_excel(request):
+    from datetime import datetime
+    
     proyectos = Proyecto.objects.all().values(
         "nombre",
         "cliente",
@@ -727,6 +729,46 @@ def exportar_excel(request):
     response = HttpResponse(
         content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
-    response["Content-Disposition"] = 'attachment; filename="proyectos.xlsx"'
+    timestamp = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
+    response["Content-Disposition"] = f'attachment; filename="proyectos_{timestamp}.xlsx"'
     df.to_excel(response, index=False, sheet_name="Proyectos")
     return response
+
+
+@login_required
+def exportar_cuadrillas_excel(request):
+    from datetime import datetime
+    
+    cuadrillas = Cuadrilla.objects.select_related("proyecto", "trabajador").all()
+    
+    data = []
+    for cuadrilla in cuadrillas:
+        data.append({
+            "nombre": cuadrilla.nombre,
+            "proyecto": cuadrilla.proyecto.nombre,
+            "estado": cuadrilla.get_estado_display(),
+            "lider": cuadrilla.trabajador.get_nombre_completo() if cuadrilla.trabajador else "Sin líder",
+            "integrantes": cuadrilla.integrantes.count(),
+        })
+    
+    df = pd.DataFrame(data)
+
+    df.rename(columns={
+        "nombre": "Nombre de Cuadrilla",
+        "proyecto": "Proyecto",
+        "estado": "Estado",
+        "lider": "Líder",
+        "integrantes": "Cantidad de Integrantes"
+    }, inplace=True)
+
+    df.fillna("—", inplace=True)
+
+    response = HttpResponse(
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    timestamp = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
+    response["Content-Disposition"] = f'attachment; filename="cuadrillas_{timestamp}.xlsx"'
+    df.to_excel(response, index=False, sheet_name="Cuadrillas")
+    return response
+
+
