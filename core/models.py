@@ -18,7 +18,7 @@ class Proyecto(models.Model):
     estado = models.CharField("Estado", max_length=20, choices=ESTADO_CHOICES, default='planificado')
     fecha_inicio = models.DateField("Fecha de inicio", default=timezone.now)
     fecha_termino = models.DateField("Fecha de término", null=True, blank=True)
-    presupuesto = models.DecimalField(max_digits=12, decimal_places=2, default=0.00, validators=[MinValueValidator(Decimal('0.00'))])
+    presupuesto = models.DecimalField(max_digits=12, decimal_places=2, default=0.00, validators=[MinValueValidator(Decimal('0.01'))])
     direccion = models.CharField("Dirección", max_length=255)
     ciudad = models.CharField("Ciudad", max_length=100)
     descripcion = models.TextField("Descripción", blank=True)

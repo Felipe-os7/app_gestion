@@ -7,7 +7,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const validators = {
         presupuesto: {
             validate: function(value) {
-                if (value === '' || value === null) return { valid: true };
+                if (value === '' || value === null) {
+                    return { 
+                        valid: false, 
+                        message: 'El presupuesto es requerido' 
+                    };
+                }
                 const numValue = parseFloat(value);
                 if (isNaN(numValue)) {
                     return { 
@@ -15,10 +20,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         message: 'El presupuesto debe ser un número válido' 
                     };
                 }
-                if (numValue < 0) {
+                if (numValue <= 0) {
                     return { 
                         valid: false, 
-                        message: 'El presupuesto no puede ser negativo' 
+                        message: 'El presupuesto debe ser mayor que 0' 
                     };
                 }
                 return { valid: true };
@@ -83,11 +88,13 @@ document.addEventListener('DOMContentLoaded', function() {
                         message: 'La fecha de inicio es requerida' 
                     };
                 }
-                const selectedDate = new Date(value);
+                // Comparar directamente strings en formato YYYY-MM-DD
                 const today = new Date();
-                today.setHours(0, 0, 0, 0);
+                const todayString = today.getFullYear() + '-' + 
+                                   String(today.getMonth() + 1).padStart(2, '0') + '-' + 
+                                   String(today.getDate()).padStart(2, '0');
                 
-                if (selectedDate < today) {
+                if (value < todayString) {
                     return { 
                         valid: false, 
                         message: 'La fecha de inicio no puede ser anterior al día actual' 
@@ -100,11 +107,13 @@ document.addEventListener('DOMContentLoaded', function() {
             validate: function(value) {
                 if (value === '') return { valid: true };
                 
-                const terminoDate = new Date(value);
+                // Comparar directamente strings en formato YYYY-MM-DD
                 const today = new Date();
-                today.setHours(0, 0, 0, 0);
+                const todayString = today.getFullYear() + '-' + 
+                                   String(today.getMonth() + 1).padStart(2, '0') + '-' + 
+                                   String(today.getDate()).padStart(2, '0');
                 
-                if (terminoDate < today) {
+                if (value < todayString) {
                     return { 
                         valid: false, 
                         message: 'La fecha de término no puede ser anterior al día actual' 
@@ -113,8 +122,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 const inicioInput = document.querySelector('input[name="fecha_inicio"]');
                 if (inicioInput && inicioInput.value) {
-                    const inicio = new Date(inicioInput.value);
-                    if (terminoDate < inicio) {
+                    if (value < inicioInput.value) {
                         return { 
                             valid: false, 
                             message: 'La fecha de término no puede ser anterior a la fecha de inicio' 
