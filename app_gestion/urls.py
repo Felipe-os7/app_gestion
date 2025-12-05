@@ -19,7 +19,6 @@ urlpatterns = [
     # Cuadrillas
     path('cuadrilla/', views.cuadrilla_view, name='cuadrilla'),
     path('cuadrilla/ver/<int:cuadrilla_id>/', views.ver_cuadrilla, name='ver_cuadrilla'),
-
     path('cuadrilla/editar/<int:cuadrilla_id>/', views.editar_cuadrilla, name='editar_cuadrilla'),
     path('cuadrilla/eliminar/<int:cuadrilla_id>/', views.eliminar_cuadrilla, name='eliminar_cuadrilla'),
     path('integrante/agregar/', views.agregar_trabajador, name='agregar_trabajador'),

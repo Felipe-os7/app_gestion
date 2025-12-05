@@ -456,13 +456,26 @@ def eliminar_integrante(request, integrante_id):
 
 @login_required
 def eliminar_cuadrilla(request, cuadrilla_id):
+    from .models import CambioCuadrilla
     cuadrilla = get_object_or_404(Cuadrilla, id=cuadrilla_id)
     if request.method == "POST":
+        # Registrar eliminación en cambios de cuadrilla
+        integrantes_cantidad = cuadrilla.integrantes.count()
+        lider_nombre = cuadrilla.trabajador.get_nombre_completo() if cuadrilla.trabajador else "Sin líder"
+        
+        CambioCuadrilla.objects.create(
+            cuadrilla=cuadrilla,
+            accion='eliminacion',
+            descripcion=f"Cuadrilla eliminada. Líder: {lider_nombre}. Integrantes desasignados: {integrantes_cantidad}. Eliminado por: {request.user.username}"
+        )
+        
+        # Desasignar integrantes
         for integrante in cuadrilla.integrantes.all():
             integrante.cuadrilla = None
             integrante.save()
+        
         cuadrilla.delete()
-        messages.success(request, "✅ Cuadrilla eliminada correctamente.")
+        messages.success(request, "✅ Cuadrilla eliminada correctamente y registrada en cambios.")
     return redirect("cuadrilla")
 
 

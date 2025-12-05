@@ -146,9 +146,10 @@ class CambioCuadrilla(models.Model):
         ('actualizacion', 'Actualización'),
         ('reasignacion', 'Reasignación'),
         ('estado', 'Cambio de estado'),
+        ('eliminacion', 'Eliminación'),
     ]
 
-    cuadrilla = models.ForeignKey(Cuadrilla, on_delete=models.CASCADE, related_name="cambios")
+    cuadrilla = models.ForeignKey(Cuadrilla, on_delete=models.SET_NULL, null=True, blank=True, related_name="cambios")
     accion = models.CharField("Tipo de acción", max_length=20, choices=ACCION_CHOICES)
     descripcion = models.TextField("Detalle del cambio")
     fecha = models.DateTimeField(auto_now_add=True)
@@ -159,7 +160,10 @@ class CambioCuadrilla(models.Model):
         ordering = ["-fecha"]
 
     def __str__(self):
-        return f"{self.get_accion_display()} · {self.cuadrilla.nombre} ({self.fecha:%d/%m %H:%M})"
+        if self.cuadrilla:
+            return f"{self.get_accion_display()} · {self.cuadrilla.nombre} ({self.fecha:%d/%m %H:%M})"
+        else:
+            return f"{self.get_accion_display()} · [Cuadrilla eliminada] ({self.fecha:%d/%m %H:%M})"
 
 
 class SolicitudReasignacion(models.Model):
