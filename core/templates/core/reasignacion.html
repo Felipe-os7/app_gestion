@@ -7,19 +7,20 @@
 
 <!-- Mensajes de éxito o error -->
 {% if messages %}
-    {% for message in messages %}
-        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    {% endfor %}
+{% for message in messages %}
+<div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+  {{ message }}
+  <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endfor %}
 {% endif %}
 
 <!-- Formulario para crear solicitud de reasignación -->
 <div class="card border-0 shadow-sm mb-4">
   <div class="card-header bg-white">
     <h5 class="mb-0">Enviar Solicitud de Reasignación</h5>
-    <small class="text-muted">Solicite la reasignación de un trabajador a otra cuadrilla. El líder de la cuadrilla destino debe aprobar la solicitud.</small>
+    <small class="text-muted">Solicite la reasignación de un trabajador a otra cuadrilla. El líder de la cuadrilla
+      destino debe aprobar la solicitud.</small>
   </div>
   <div class="card-body">
     <form method="post" class="row g-3">
@@ -30,9 +31,10 @@
         <select name="trabajador_id" class="form-select" required>
           <option value="" selected disabled>— Seleccione un trabajador —</option>
           {% for trabajador in trabajadores %}
-            <option value="{{ trabajador.id }}">{{ trabajador.get_nombre_completo }} · {{ trabajador.cuadrilla.nombre }} ({{ trabajador.get_cargo_display }})</option>
+          <option value="{{ trabajador.id }}">{{ trabajador.get_nombre_completo }} · {{ trabajador.cuadrilla.nombre }}
+            ({{ trabajador.get_cargo_display }})</option>
           {% empty %}
-            <option disabled>No hay trabajadores asignados</option>
+          <option disabled>No hay trabajadores asignados</option>
           {% endfor %}
         </select>
       </div>
@@ -41,7 +43,7 @@
         <select name="cuadrilla_destino" class="form-select" required>
           <option value="" selected disabled>— Seleccione cuadrilla destino —</option>
           {% for cuadrilla in cuadrillas %}
-            <option value="{{ cuadrilla.id }}">{{ cuadrilla.nombre }} · {{ cuadrilla.proyecto.nombre }}</option>
+          <option value="{{ cuadrilla.id }}">{{ cuadrilla.nombre }} · {{ cuadrilla.proyecto.nombre }}</option>
           {% endfor %}
         </select>
       </div>
@@ -60,7 +62,8 @@
 <div class="card border-0 shadow-sm mb-4">
   <div class="card-header bg-white">
     <h5 class="mb-0">Agregar Trabajador No Asignado</h5>
-    <small class="text-muted">Asigne directamente un trabajador que actualmente no pertenece a ninguna cuadrilla.</small>
+    <small class="text-muted">Asigne directamente un trabajador que actualmente no pertenece a ninguna
+      cuadrilla.</small>
   </div>
   <div class="card-body">
     <form method="post" class="row g-3">
@@ -71,9 +74,10 @@
         <select name="trabajador_id" class="form-select" required>
           <option value="" selected disabled>— Seleccione un trabajador no asignado —</option>
           {% for trabajador in trabajadores_noasignados %}
-            <option value="{{ trabajador.id }}">{{ trabajador.get_nombre_completo }} · {{ trabajador.get_cargo_display }}</option>
+          <option value="{{ trabajador.id }}">{{ trabajador.get_nombre_completo }} · {{ trabajador.get_cargo_display }}
+          </option>
           {% empty %}
-            <option disabled>No hay trabajadores sin asignar</option>
+          <option disabled>No hay trabajadores sin asignar</option>
           {% endfor %}
         </select>
       </div>
@@ -82,7 +86,7 @@
         <select name="cuadrilla_destino" class="form-select" required>
           <option value="" selected disabled>— Seleccione cuadrilla destino —</option>
           {% for cuadrilla in cuadrillas %}
-            <option value="{{ cuadrilla.id }}">{{ cuadrilla.nombre }} · {{ cuadrilla.proyecto.nombre }}</option>
+          <option value="{{ cuadrilla.id }}">{{ cuadrilla.nombre }} · {{ cuadrilla.proyecto.nombre }}</option>
           {% endfor %}
         </select>
       </div>
@@ -121,44 +125,33 @@
           <td>{{ solicitud.motivo|default:"—" }}</td>
           <td>
             {% if solicitud.estado == 'pendiente' %}
-              <span class="badge bg-warning text-dark">Pendiente</span>
+            <span class="badge bg-warning text-dark">Pendiente</span>
             {% elif solicitud.estado == 'aceptada' %}
-              <span class="badge bg-success">Aceptada</span>
+            <span class="badge bg-success">Aceptada</span>
             {% else %}
-              <span class="badge bg-danger">Rechazada</span>
+            <span class="badge bg-danger">Rechazada</span>
             {% endif %}
           </td>
           <td>{{ solicitud.fecha_solicitud|date:"d/m/Y H:i" }}</td>
           <td>
-              {% if solicitud.estado == 'pendiente' %}
-              {% if user_is_lider %}
-                {% if solicitud.cuadrilla_destino.trabajador and solicitud.cuadrilla_destino.trabajador.usuario == request.user %}
-                  <form method="post" class="d-inline">
-                    {% csrf_token %}
-                    <input type="hidden" name="accion" value="responder_solicitud">
-                    <input type="hidden" name="solicitud_id" value="{{ solicitud.id }}">
-                    <button type="submit" name="respuesta" value="aceptar" class="btn btn-sm btn-success mb-1">✓ Aceptar</button>
-                    <button type="submit" name="respuesta" value="rechazar" class="btn btn-sm btn-danger mb-1">✗ Rechazar</button>
-                  </form>
-                {% else %}
-                  <span class="text-muted small">Esperando respuesta del líder</span>
-                {% endif %}
-              {% else %}
-                <span class="text-muted small">Pendiente</span>
-              {% endif %}
+            {% if solicitud.estado == 'pendiente' %}
+            {% if user_is_lider %}
+            {% if solicitud.cuadrilla_destino.trabajador and solicitud.cuadrilla_destino.trabajador.usuario == request.user %}
+            <form method="post" class="d-inline">
+              {% csrf_token %}
+              <input type="hidden" name="accion" value="responder_solicitud">
+              <input type="hidden" name="solicitud_id" value="{{ solicitud.id }}">
+              <button type="submit" name="respuesta" value="aceptar" class="btn btn-sm btn-success mb-1">✓ Aceptar</button>
+              <button type="submit" name="respuesta" value="rechazar" class="btn btn-sm btn-danger mb-1">✗ Rechazar</button>
+            </form>
             {% else %}
-              <small class="text-muted">
-                {% if solicitud.respondido_por %}
-                  Respondido por: {{ solicitud.respondido_por.get_full_name|default:solicitud.respondido_por.username }}<br>
-                  {{ solicitud.fecha_respuesta|date:"d/m/Y H:i" }}
-                {% endif %}
-              </small>
+            <span class="text-muted small">Esperando respuesta del líder</span>
+            {% endif %}
+            {% else %}
+            <span class="text-muted small">Pendiente</span>
+            {% endif %}
             {% endif %}
           </td>
-        </tr>
-        {% empty %}
-        <tr>
-          <td colspan="7" class="text-center text-muted py-4">No hay solicitudes de reasignación.</td>
         </tr>
         {% endfor %}
       </tbody>
@@ -166,4 +159,3 @@
   </div>
 </div>
 {% endblock %}
-

@@ -8,17 +8,17 @@
 
 <!-- Mensajes de éxito o error -->
 {% if messages %}
-    {% for message in messages %}
-        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    {% endfor %}
+{% for message in messages %}
+<div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+  {{ message }}
+  <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endfor %}
 {% endif %}
 
 <!-- Tabla de cuadrillas registradas - MOSTRADA PRIMERO -->
-<div class="card border-0 shadow-sm mb-4">
-  <div class="card-header bg-white d-flex justify-content-between align-items-center">
+<div class="card mb-4">
+  <div class="card-header d-flex justify-content-between align-items-center">
     <h3 class="h5 mb-0">Cuadrillas registradas</h3>
     <span class="badge bg-primary text-white">{{ cuadrillas|length }} en total</span>
   </div>
@@ -46,14 +46,15 @@
           <td>
             <ul class="mb-0">
               {% for i in c.integrantes.all %}
-                <li>
-                  <strong>{{ i.nombre }}</strong> — {{ i.get_cargo_display }}
-                  <span class="badge {% if i.estado == 'asignado' %}bg-success{% elif i.estado == 'licencia' %}bg-warning text-dark{% elif i.estado == 'suspendido' %}bg-danger{% else %}bg-secondary{% endif %} ms-1">
-                    {{ i.get_estado_display }}
-                  </span>
-                </li>
+              <li>
+                <strong>{{ i.nombre }}</strong> — {{ i.get_cargo_display }}
+                <small class="text-muted fst-italic">({{ i.get_especialidad_display|default:"Sin esp." }})</small>
+                <span class="badge {% if i.estado == 'asignado' %}bg-success{% elif i.estado == 'licencia' %}bg-warning text-dark{% elif i.estado == 'suspendido' %}bg-danger{% else %}bg-secondary{% endif %} ms-1">
+                  {{ i.get_estado_display }}
+                </span>
+              </li>
               {% empty %}
-                <li><em>Sin integrantes</em></li>
+              <li><em>Sin integrantes</em></li>
               {% endfor %}
             </ul>
           </td>
@@ -95,123 +96,121 @@
       <select name="proyecto" class="form-select" required>
         <option value="" disabled {% if not cuadrilla %}selected{% endif %}>— Seleccione un proyecto —</option>
         {% for p in proyectos %}
-          <option value="{{ p.codigo }}" {% if cuadrilla and cuadrilla.proyecto.codigo == p.codigo %}selected{% endif %}>{{ p.nombre }}</option>
+        <option value="{{ p.codigo }}" {% if cuadrilla and cuadrilla.proyecto.codigo == p.codigo %}selected{% endif %}>{{ p.nombre }}</option>
         {% endfor %}
       </select>
     </div>
 
     <div class="col-md-4">
-  <label class="form-label">Estado</label>
-  <div class="d-flex align-items-center">
-      <select name="estado" class="form-select" required>
+      <label class="form-label">Estado</label>
+      <div class="d-flex align-items-center">
+        <select name="estado" class="form-select" required>
           <option value="activa" {% if cuadrilla and cuadrilla.estado == 'activa' %}selected{% endif %}>Activa</option>
           <option value="inactiva" {% if cuadrilla and cuadrilla.estado == 'inactiva' %}selected{% endif %}>Inactiva</option>
-      </select>
-      {% if cuadrilla %}
-      <span class="ms-2 px-2 py-1 rounded {% if cuadrilla.estado == 'activa' %}bg-success text-white{% else %}bg-danger text-white{% endif %}">
+        </select>
+        {% if cuadrilla %}
+        <span class="ms-2 px-2 py-1 rounded {% if cuadrilla.estado == 'activa' %}bg-success text-white{% else %}bg-danger text-white{% endif %}">
           {{ cuadrilla.get_estado_display }}
-      </span>
-      {% endif %}
-  </div>
-</div>
+        </span>
+        {% endif %}
+      </div>
+    </div>
 
     <div class="col-12 mt-3">
-      <div class="card border-0 shadow-sm mb-3">
-        </div>
-        <div class="card border-0 shadow-sm">
-          <div class="card-header bg-white d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
-            <div>
-              <h5 class="mb-0">Seleccionar y definir roles del equipo</h5>
-              <small class="text-muted">Seleccione los trabajadores registrados y defina su rol y estado dentro de la cuadrilla.</small>
-            </div>
-            <div class="w-100 w-md-50">
-              <input type="search" id="filtro-integrantes" class="form-control form-control-sm" placeholder="Buscar trabajador por nombre">
-            </div>
+      <div class="card">
+        <div class="card-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
+          <div>
+            <h5 class="mb-0">Seleccionar y definir roles del equipo</h5>
+            <small class="text-muted">Seleccione los trabajadores registrados y defina su rol y estado dentro de la cuadrilla.</small>
           </div>
-          <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0" id="tabla-integrantes">
-              <thead class="table-light">
-                <tr>
-                  <th scope="col">Seleccionar</th>
-                  <th scope="col">Trabajador</th>
-                  <th scope="col">Rol dentro de la cuadrilla</th>
-                  <th scope="col">Estado operativo</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for i in integrantes_form %}
-                <tr data-nombre="{{ i.nombre|lower }}">
-                    <td style="width: 90px;">
-                    <div class="form-check">
-                      {# Determinar si el trabajador está en licencia y permitir sólo si ya pertenece a la cuadrilla actual #}
-                      {% if i.estado == 'licencia' %}
-                        {% if cuadrilla and i.cuadrilla and i.cuadrilla.id == cuadrilla.id %}
-                          <input class="form-check-input integrante-check" type="checkbox" name="integrantes" value="{{ i.id }}" id="integrante-{{ i.id }}" {% if cuadrilla and i.cuadrilla and i.cuadrilla.id == cuadrilla.id %}checked{% endif %}>
-                        {% else %}
-                          <input class="form-check-input integrante-check" type="checkbox" name="integrantes" value="{{ i.id }}" id="integrante-{{ i.id }}" disabled title="No se puede seleccionar: trabajador en licencia">
-                        {% endif %}
+          <div class="w-100 w-md-50">
+            <input type="search" id="filtro-integrantes" class="form-control form-control-sm" placeholder="Buscar trabajador por nombre">
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0" id="tabla-integrantes">
+            <thead class="table-light">
+              <tr>
+                <th scope="col">Seleccionar</th>
+                <th scope="col">Trabajador</th>
+                <th scope="col">Rol dentro de la cuadrilla</th>
+                <th scope="col">Estado operativo</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for i in integrantes_form %}
+              <tr data-nombre="{{ i.nombre|lower }}">
+                <td style="width: 90px;">
+                  <div class="form-check">
+                    {% if i.estado == 'licencia' %}
+                      {% if cuadrilla and i.cuadrilla and i.cuadrilla.id == cuadrilla.id %}
+                        <input class="form-check-input integrante-check" type="checkbox" name="integrantes" value="{{ i.id }}" id="integrante-{{ i.id }}" checked>
                       {% else %}
-                        <input class="form-check-input integrante-check" type="checkbox" name="integrantes" value="{{ i.id }}" id="integrante-{{ i.id }}" {% if cuadrilla and i.cuadrilla and i.cuadrilla.id == cuadrilla.id %}checked{% endif %}>
+                        <input class="form-check-input integrante-check" type="checkbox" name="integrantes" value="{{ i.id }}" id="integrante-{{ i.id }}" disabled title="No se puede seleccionar: trabajador en licencia">
                       {% endif %}
-                    </div>
-                  </td>
-                  <td>
-                    <label class="fw-semibold mb-0" for="integrante-{{ i.id }}">{{ i.nombre }}</label>
-                    <div class="small text-muted">
-                      Cargo base: {{ i.get_cargo_display }} ·
-                      {% if i.cuadrilla %}
-                        {% if cuadrilla and i.cuadrilla.id == cuadrilla.id %}
-                          Asignado a esta cuadrilla
-                        {% else %}
-                          Actualmente en <span class="badge bg-light text-dark">{{ i.cuadrilla.nombre }}</span>
-                        {% endif %}
+                    {% else %}
+                      <input class="form-check-input integrante-check" type="checkbox" name="integrantes" value="{{ i.id }}" id="integrante-{{ i.id }}" {% if cuadrilla and i.cuadrilla and i.cuadrilla.id == cuadrilla.id %}checked{% endif %}>
+                    {% endif %}
+                  </div>
+                </td>
+                <td>
+                  <label class="fw-semibold mb-0" for="integrante-{{ i.id }}">{{ i.nombre }}</label>
+                  <div class="small text-muted">
+                    {{ i.get_cargo_display }} · {{ i.get_especialidad_display|default:"Sin esp." }} ·
+                    {% if i.cuadrilla %}
+                      {% if cuadrilla and i.cuadrilla.id == cuadrilla.id %}
+                      Asignado a esta cuadrilla
                       {% else %}
-                        Disponible
+                      Actualmente en <span class="badge bg-light text-dark">{{ i.cuadrilla.nombre }}</span>
                       {% endif %}
-                    </div>
-                  </td>
-                  <td style="width: 240px;">
-                    <select name="rol_{{ i.id }}" class="form-select form-select-sm control-integrante" data-checkbox="integrante-{{ i.id }}" {% if not cuadrilla or i.cuadrilla and i.cuadrilla.id != cuadrilla.id %}disabled{% endif %}>
-                      {% for clave, texto in cargo_choices %}
-                        <option value="{{ clave }}" {% if i.cargo == clave %}selected{% endif %}>{{ texto }}</option>
+                    {% else %}
+                    Disponible
+                    {% endif %}
+                  </div>
+                </td>
+                <td style="width: 240px;">
+                  <select name="rol_{{ i.id }}" class="form-select form-select-sm control-integrante" data-checkbox="integrante-{{ i.id }}" {% if not cuadrilla or i.cuadrilla and i.cuadrilla.id != cuadrilla.id %}disabled{% endif %}>
+                    {% for clave, texto in cargo_choices %}
+                    <option value="{{ clave }}" {% if i.cargo == clave %}selected{% endif %}>{{ texto }}</option>
+                    {% endfor %}
+                  </select>
+                </td>
+                <td style="width: 220px;">
+                  <div class="d-flex flex-column">
+                    <select name="estado_{{ i.id }}" class="form-select form-select-sm control-integrante estado-select" data-checkbox="integrante-{{ i.id }}" data-id="{{ i.id }}" {% if not cuadrilla or i.cuadrilla and i.cuadrilla.id != cuadrilla.id %}disabled{% endif %}>
+                      {% for clave, texto in estado_choices %}
+                      {% if clave != 'disponible' or not cuadrilla or not i.cuadrilla or i.cuadrilla.id != cuadrilla.id %}
+                      <option value="{{ clave }}" {% if i.estado == clave %}selected{% elif not i.estado and clave == 'asignado' %}selected{% endif %}>{{ texto }}</option>
+                      {% endif %}
                       {% endfor %}
                     </select>
-                  </td>
-                  <td style="width: 220px;">
-                    <div class="d-flex flex-column">
-                      <select name="estado_{{ i.id }}" class="form-select form-select-sm control-integrante estado-select" data-checkbox="integrante-{{ i.id }}" data-id="{{ i.id }}" {% if not cuadrilla or i.cuadrilla and i.cuadrilla.id != cuadrilla.id %}disabled{% endif %}>
-                        {% for clave, texto in estado_choices %}
-                          {% if clave != 'disponible' or not cuadrilla or not i.cuadrilla or i.cuadrilla.id != cuadrilla.id %}
-                            <option value="{{ clave }}" {% if i.estado == clave %}selected{% elif not i.estado and clave == 'asignado' %}selected{% endif %}>{{ texto }}</option>
-                          {% endif %}
-                        {% endfor %}
-                      </select>
-                      <div class="mt-2 licencia-dates" id="licencia-box-{{ i.id }}" style="display: {% if i.estado == 'licencia' %}block{% else %}none{% endif %};">
-                        <div class="row g-2">
-                          <div class="col-6">
-                            <input type="date" name="licencia_inicio_{{ i.id }}" class="form-control form-control-sm" value="{{ i.licencia_inicio|default_if_none:'' }}" placeholder="Inicio">
-                          </div>
-                          <div class="col-6">
-                            <input type="date" name="licencia_fin_{{ i.id }}" class="form-control form-control-sm" value="{{ i.licencia_fin|default_if_none:'' }}" placeholder="Fin">
-                          </div>
+                    <div class="mt-2 licencia-dates" id="licencia-box-{{ i.id }}" style="display: {% if i.estado == 'licencia' %}block{% else %}none{% endif %};">
+                      <div class="row g-2">
+                        <div class="col-6">
+                          <input type="date" name="licencia_inicio_{{ i.id }}" class="form-control form-control-sm" value="{{ i.licencia_inicio|default_if_none:'' }}" placeholder="Inicio">
+                        </div>
+                        <div class="col-6">
+                          <input type="date" name="licencia_fin_{{ i.id }}" class="form-control form-control-sm" value="{{ i.licencia_fin|default_if_none:'' }}" placeholder="Fin">
                         </div>
                       </div>
                     </div>
-                  </td>
-                  <td style="width: 90px;">
-                    {% if not i.usuario %}
-                      <button type="button" class="btn btn-sm btn-danger btn-delete-integrante" data-url="{% url 'eliminar_integrante' i.id %}">Eliminar</button>
-                    {% endif %}
-                </tr>
-                {% empty %}
-                <tr>
-                  <td colspan="4" class="text-center text-muted py-4">No hay trabajadores disponibles para asignar.</td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
+                  </div>
+                </td>
+                <td style="width: 90px;">
+                  {% if not i.usuario %}
+                  <button type="button" class="btn btn-sm btn-danger btn-delete-integrante" data-url="{% url 'eliminar_integrante' i.id %}">Eliminar</button>
+                  {% endif %}
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="5" class="text-center text-muted py-4">No hay trabajadores disponibles para asignar.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
         </div>
+      </div>
     </div>
   </div>
 
@@ -222,28 +221,26 @@
   </div>
 </form>
 
-
-
 <!-- Historial de cambios -->
-<div class="card border-0 shadow-sm mt-5">
-  <div class="card-header bg-white d-flex justify-content-between align-items-center">
+<div class="card mt-5">
+  <div class="card-header d-flex justify-content-between align-items-center">
     <h5 class="mb-0">Historial de cambios recientes</h5>
     <small class="text-muted">Visibles para todos los interesados.</small>
   </div>
   <ul class="list-group list-group-flush">
     {% for item in historial %}
-      <li class="list-group-item">
-        <div class="d-flex justify-content-between">
-          <div>
-            <strong>{{ item.cuadrilla.nombre }}</strong>
-            <span class="badge bg-light text-dark ms-2">{{ item.get_accion_display }}</span>
-          </div>
-          <span class="text-muted small">{{ item.fecha|date:"d/m/Y H:i" }}</span>
+    <li class="list-group-item">
+      <div class="d-flex justify-content-between">
+        <div>
+          <strong>{{ item.cuadrilla.nombre }}</strong>
+          <span class="badge bg-light text-dark ms-2">{{ item.get_accion_display }}</span>
         </div>
-        <p class="mb-0 text-muted small mt-1">{{ item.descripcion }}</p>
-      </li>
+        <span class="text-muted small">{{ item.fecha|date:"d/m/Y H:i" }}</span>
+      </div>
+      <p class="mb-0 text-muted small mt-1">{{ item.descripcion }}</p>
+    </li>
     {% empty %}
-      <li class="list-group-item text-center text-muted">Aún no hay registros.</li>
+    <li class="list-group-item text-center text-muted">Aún no hay registros.</li>
     {% endfor %}
   </ul>
 </div>
@@ -251,47 +248,45 @@
 
 {% block scripts %}
 <script>
-document.addEventListener("DOMContentLoaded", function () {
-  document.querySelectorAll(".integrante-check").forEach(function (checkbox) {
-    const row = checkbox.closest("tr");
-    const controls = row.querySelectorAll(".control-integrante");
-    const syncState = function () {
-      controls.forEach(function (control) {
-        control.disabled = !checkbox.checked;
+  document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll(".integrante-check").forEach(function (checkbox) {
+      const row = checkbox.closest("tr");
+      const controls = row.querySelectorAll(".control-integrante");
+      const syncState = function () {
+        controls.forEach(function (control) {
+          control.disabled = !checkbox.checked;
+        });
+      };
+      checkbox.addEventListener("change", syncState);
+      syncState();
+    });
+
+    const filtro = document.getElementById("filtro-integrantes");
+    const filas = document.querySelectorAll("#tabla-integrantes tbody tr");
+    if (filtro) {
+      filtro.addEventListener("input", function () {
+        const termino = filtro.value.trim().toLowerCase();
+        filas.forEach(function (fila) {
+          const nombre = fila.dataset.nombre || "";
+          fila.style.display = nombre.includes(termino) ? "" : "none";
+        });
       });
-    };
-    checkbox.addEventListener("change", syncState);
-    syncState();
+    }
   });
 
-  const filtro = document.getElementById("filtro-integrantes");
-  const filas = document.querySelectorAll("#tabla-integrantes tbody tr");
-  if (filtro) {
-    filtro.addEventListener("input", function () {
-      const termino = filtro.value.trim().toLowerCase();
-      filas.forEach(function (fila) {
-        const nombre = fila.dataset.nombre || "";
-        fila.style.display = nombre.includes(termino) ? "" : "none";
-      });
-    });
-  }
-
-  // No inline "trabajadores nuevos" UI — use dedicated view
-});
-
   // Mostrar/ocultar inputs de licencia según valor del select
-  document.querySelectorAll('.estado-select').forEach(function(select){
-    function sync(){
+  document.querySelectorAll('.estado-select').forEach(function (select) {
+    function sync() {
       var id = select.dataset.id;
       var box = document.getElementById('licencia-box-' + id);
-      if(!box) return;
+      if (!box) return;
       box.style.display = select.value === 'licencia' ? 'block' : 'none';
     }
     select.addEventListener('change', sync);
     sync();
   });
 
-  // Eliminar integrante vía AJAX para evitar que se someta el form padre
+  // Eliminar integrante vía AJAX
   function getCookie(name) {
     let cookieValue = null;
     if (document.cookie && document.cookie !== '') {
@@ -307,8 +302,8 @@ document.addEventListener("DOMContentLoaded", function () {
     return cookieValue;
   }
 
-  document.querySelectorAll('.btn-delete-integrante').forEach(function(btn){
-    btn.addEventListener('click', function(e){
+  document.querySelectorAll('.btn-delete-integrante').forEach(function (btn) {
+    btn.addEventListener('click', function (e) {
       if (!confirm('¿Eliminar trabajador? Esta acción no se puede deshacer.')) return;
       const url = btn.getAttribute('data-url');
       const csrftoken = getCookie('csrftoken');
@@ -319,17 +314,16 @@ document.addEventListener("DOMContentLoaded", function () {
           'Accept': 'text/html'
         },
         credentials: 'same-origin'
-      }).then(function(response){
+      }).then(function (response) {
         if (response.ok) {
-          // Recargar para reflejar el cambio
           location.reload();
         } else {
-          response.text().then(function(text){
+          response.text().then(function (text) {
             console.error('Delete failed:', text);
             alert('No fue posible eliminar el trabajador. Revisa la consola para más detalles.');
           });
         }
-      }).catch(function(err){
+      }).catch(function (err) {
         console.error('Network error deleting integrante:', err);
         alert('Error de red al eliminar trabajador. Revisa la consola para más detalles.');
       });

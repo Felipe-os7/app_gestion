@@ -24,12 +24,24 @@
       <option value="supervisor">Supervisor</option>
     </select>
   </div>
+  <div class="col-md-4">
+    <label class="form-label">Especialidad</label>
+    <select name="especialidad" class="form-select">
+      <option value="electricista">Electricista</option>
+      <option value="albanil">Albañil</option>
+      <option value="fontanero">Fontanero</option>
+      <option value="pintor">Pintor</option>
+      <option value="carpintero">Carpintero</option>
+      <option value="jornal">Jornal</option>
+      <option value="otro" selected>Otro</option>
+    </select>
+  </div>
   <div class="col-md-6">
     <label class="form-label">Asignar a cuadrilla (opcional)</label>
     <select name="cuadrilla" class="form-select">
       <option value="">— Sin asignar —</option>
       {% for c in cuadrillas %}
-        <option value="{{ c.id }}">{{ c.nombre }} · {{ c.proyecto.nombre }}</option>
+      <option value="{{ c.id }}">{{ c.nombre }} · {{ c.proyecto.nombre }}</option>
       {% endfor %}
     </select>
   </div>

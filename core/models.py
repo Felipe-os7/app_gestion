@@ -84,6 +84,16 @@ class Integrante(models.Model):
         ('suspendido', 'Suspendido'),
     ]
 
+    ESPECIALIDAD_CHOICES = [
+        ('electricista', 'Electricista'),
+        ('albanil', 'Albañil'),
+        ('fontanero', 'Fontanero'),
+        ('pintor', 'Pintor'),
+        ('carpintero', 'Carpintero'), # Added Carpenter as a common extra
+        ('jornal', 'Jornal'), # Added Jornal as a common extra
+        ('otro', 'Otro'),
+    ]
+
     usuario = models.OneToOneField(
         User,
         on_delete=models.CASCADE,
@@ -102,6 +112,7 @@ class Integrante(models.Model):
         blank=True,
         related_name="integrantes"
     )
+    especialidad = models.CharField("Especialidad", max_length=20, choices=ESPECIALIDAD_CHOICES, blank=True, null=True)
     estado = models.CharField("Estado del trabajador", max_length=15, choices=ESTADO_CHOICES, default='disponible')
     fecha_actualizacion = models.DateTimeField(auto_now=True)
     notas = models.TextField("Notas internas", blank=True)

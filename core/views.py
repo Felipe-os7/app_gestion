@@ -411,6 +411,7 @@ def agregar_trabajador(request):
         nombre = request.POST.get('nombre_trabajador', '').strip()
         apellido = request.POST.get('apellido_trabajador', '').strip()
         cargo = request.POST.get('cargo', 'operario')
+        especialidad = request.POST.get('especialidad', 'otro') # Default to otro
         cuadrilla_id = request.POST.get('cuadrilla')
 
         if not nombre or not apellido:
@@ -425,6 +426,7 @@ def agregar_trabajador(request):
             nombre_trabajador=nombre,
             apellido_trabajador=apellido,
             cargo=cargo,
+            especialidad=especialidad,
             cuadrilla=cuadrilla,
             estado='asignado' if cuadrilla else 'disponible'
         )
